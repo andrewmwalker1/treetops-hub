@@ -779,7 +779,7 @@ function AdminGate({ onSuccess, onCancel }) {
   };
 
   return (
-    <div style={{ padding: "60px 24px", background: C.ink, minHeight: 700, display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div style={{ padding: "60px 24px", background: C.ink, minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div style={{ background: C.white, borderRadius: 12, padding: "8px 16px", marginBottom: 24 }}>
         <img src={LOGO_DATA_URI} alt="Tree Tops Caravan Park" style={{ height: 34, width: "auto", display: "block" }} />
       </div>
@@ -816,7 +816,7 @@ function AdminShell({ children, tab, setTab, onExit }) {
     { key: "settings", label: "Settings" },
   ];
   return (
-    <div style={{ minHeight: 700, background: C.sand }}>
+    <div style={{ minHeight: "100%", background: C.sand }}>
       <div style={{ background: C.ink, padding: "18px 20px 0", paddingTop: "max(18px, env(safe-area-inset-top))" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h2 style={{ fontFamily: displayFont, color: C.white, fontSize: 19, margin: 0 }}>Admin portal</h2>
@@ -1782,10 +1782,8 @@ export default function TreeTopsHubApp() {
   };
 
   const frame = (inner) => (
-    <div style={{ paddingTop: "env(safe-area-inset-top)", background: C.sand }}>
-      <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, minHeight: 700, position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}` }}>
-        <div style={{ height: 700, overflowY: "auto" }}>{inner}</div>
-      </div>
+    <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}`, boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
+      <div style={{ height: "100%", overflowY: "auto" }}>{inner}</div>
     </div>
   );
 
