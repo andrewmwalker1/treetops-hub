@@ -1744,6 +1744,15 @@ export default function TreeTopsHubApp() {
   const [tab, setTab] = useState("home");
   const [activeFormId, setActiveFormId] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(display-mode: standalone)");
+    const check = () => setIsStandalone(mq.matches || window.navigator.standalone === true);
+    check();
+    mq.addEventListener("change", check);
+    return () => mq.removeEventListener("change", check);
+  }, []);
 
   const [notices, setNotices] = useState(SEED_NOTICES);
   const [forms, setForms] = useState(SEED_FORMS);
@@ -1781,11 +1790,16 @@ export default function TreeTopsHubApp() {
     if (formId) setActiveFormId(formId);
   };
 
-  const frame = (inner) => (
-    <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}`, boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
-      <div style={{ height: "100%", overflowY: "auto" }}>{inner}</div>
-    </div>
-  );
+  const frame = (inner) =>
+    isStandalone ? (
+      <div style={{ width: "100%", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
+        <div style={{ height: "100%", overflowY: "auto" }}>{inner}</div>
+      </div>
+    ) : (
+      <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}`, boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
+        <div style={{ height: "100%", overflowY: "auto" }}>{inner}</div>
+      </div>
+    );
 
   if (loading) {
     return frame(<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.bark, fontSize: 13 }}>Loading Tree Tops Hub…</div>);
