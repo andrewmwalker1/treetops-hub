@@ -5,6 +5,7 @@ import {
   Settings, LogOut, FileText, Calendar, ShieldCheck, ChevronUp, ChevronDown, Star,
   Compass, Search, Globe, PawPrint, X, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle,
   CloudRain, CloudSnow, CloudLightning, Languages, Navigation, Wrench,
+  TrendingUp, Smartphone, BarChart3,
 } from "lucide-react";
 
 // ---- Brand tokens ----
@@ -217,6 +218,21 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+const MAX_LOGGED_EVENTS = 2000;
+
+// Fire-and-forget usage logging: reads the shared events log, appends one
+// entry, and writes it back. This is a lightweight approach suited to a
+// single-park app's traffic — not built for high concurrency.
+async function logEvent(type, label) {
+  try {
+    const current = await loadData("events", []);
+    const next = [...current, { type, label, ts: Date.now() }].slice(-MAX_LOGGED_EVENTS);
+    saveData("events", next);
+  } catch {
+    // usage logging should never block or break the guest experience
+  }
+}
+
 // Builds a CSV file from an array of objects and triggers a browser download.
 // `columns` is an array of [header, accessorFn] pairs so callers control
 // column order and formatting (e.g. resolving a categoryId to a name).
@@ -255,6 +271,7 @@ function FormLinkScreen({ form, onBack }) {
             href={form.link}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => logEvent("form_launch", form.title)}
             style={{ ...btnPrimary, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, textDecoration: "none", boxSizing: "border-box" }}
           >
             Open form <ChevronRight size={16} />
@@ -457,6 +474,7 @@ function NoticesScreen({ notices: allNotices }) {
 
 function DirectoryEntryCard({ entry, categories }) {
   const [showInfo, setShowInfo] = useState(false);
+  const label = `${entry.name} (${CATEGORY_NAME(categories, entry.categoryId)})`;
   return (
     <div style={{ ...card, marginBottom: 10, position: "relative" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
@@ -489,18 +507,19 @@ function DirectoryEntryCard({ entry, categories }) {
             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(entry.address + ", Wales")}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => logEvent("directory_navigate", label)}
             style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}
           >
             <Navigation size={13} /> Directions
           </a>
         )}
         {entry.phone && (
-          <a href={`tel:${entry.phone.replace(/\s+/g, "")}`} style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
+          <a href={`tel:${entry.phone.replace(/\s+/g, "")}`} onClick={() => logEvent("directory_call", label)} style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
             <PhoneCall size={13} /> Call
           </a>
         )}
         {entry.website && (
-          <a href={entry.website.startsWith("http") ? entry.website : `https://${entry.website}`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
+          <a href={entry.website.startsWith("http") ? entry.website : `https://${entry.website}`} target="_blank" rel="noopener noreferrer" onClick={() => logEvent("directory_website", label)} style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
             <Globe size={13} /> Website
           </a>
         )}
@@ -599,6 +618,7 @@ function DirectoryScreen({ directory, categories }) {
 
 function ContractorCard({ contractor, categories }) {
   const [showInfo, setShowInfo] = useState(false);
+  const label = `${contractor.name} (${CATEGORY_NAME(categories, contractor.categoryId)})`;
   return (
     <div style={{ ...card, marginBottom: 10, position: "relative" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
@@ -621,13 +641,14 @@ function ContractorCard({ contractor, categories }) {
             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(contractor.address + ", Wales")}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => logEvent("contractor_navigate", label)}
             style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}
           >
             <Navigation size={13} /> Directions
           </a>
         )}
         {contractor.phone && (
-          <a href={`tel:${contractor.phone.split("/")[0].trim().replace(/\s+/g, "")}`} style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
+          <a href={`tel:${contractor.phone.split("/")[0].trim().replace(/\s+/g, "")}`} onClick={() => logEvent("contractor_call", label)} style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
             <PhoneCall size={13} /> {contractor.phone}
           </a>
         )}
@@ -835,6 +856,7 @@ function AdminGate({ onSuccess, onCancel }) {
 
 function AdminShell({ children, tab, setTab, onExit }) {
   const tabs = [
+    { key: "stats", label: "Stats" },
     { key: "notices", label: "Notices" },
     { key: "forms", label: "Forms" },
     { key: "directory", label: "Directory" },
@@ -1746,6 +1768,115 @@ function AdminWelshWords({ words, setWords }) {
   );
 }
 
+function StatCard({ icon: Icon, label, value }) {
+  return (
+    <div style={{ ...card, flex: 1 }}>
+      <Icon size={16} color={C.green} />
+      <p style={{ margin: "8px 0 2px", fontSize: 22, fontWeight: 700, color: C.ink, fontFamily: displayFont }}>{value}</p>
+      <p style={{ margin: 0, fontSize: 11, color: C.bark }}>{label}</p>
+    </div>
+  );
+}
+
+function rankEvents(events, types, limit = 8) {
+  const counts = {};
+  events.filter((e) => types.includes(e.type)).forEach((e) => {
+    counts[e.label] = (counts[e.label] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit);
+}
+
+function RankList({ title, rows, emptyText }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <SectionLabel>{title}</SectionLabel>
+      {rows.length === 0 ? (
+        <p style={{ fontSize: 12, color: C.bark }}>{emptyText}</p>
+      ) : (
+        <div style={card}>
+          {rows.map(([label, count], i) => (
+            <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "7px 0", borderBottom: i === rows.length - 1 ? "none" : `1px solid ${C.sandDeep}` }}>
+              <span style={{ fontSize: 13, color: C.ink, paddingRight: 10 }}>{label}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.green, flexShrink: 0 }}>{count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminStats() {
+  const [events, setEvents] = useState(null); // null = loading
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadData("events", []).then((data) => { if (!cancelled) setEvents(data); });
+    return () => { cancelled = true; };
+  }, [refreshKey]);
+
+  if (events === null) {
+    return <p style={{ fontSize: 13, color: C.bark }}>Loading usage stats…</p>;
+  }
+
+  const opens = events.filter((e) => e.type === "app_open");
+  const standalone = opens.filter((e) => e.label === "standalone").length;
+  const standalonePct = opens.length ? Math.round((standalone / opens.length) * 100) : 0;
+
+  const now = Date.now();
+  const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const opensLast7 = opens.filter((e) => e.ts >= sevenDaysAgo).length;
+
+  const dayBuckets = [...Array(7)].map((_, i) => {
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    dayStart.setDate(dayStart.getDate() - (6 - i));
+    const dayEnd = dayStart.getTime() + 24 * 60 * 60 * 1000;
+    const count = opens.filter((e) => e.ts >= dayStart.getTime() && e.ts < dayEnd).length;
+    return { label: dayStart.toLocaleDateString("en-GB", { weekday: "short" }), count };
+  });
+  const maxDay = Math.max(1, ...dayBuckets.map((d) => d.count));
+
+  const calls = rankEvents(events, ["directory_call", "contractor_call"]);
+  const navs = rankEvents(events, ["directory_navigate", "contractor_navigate"]);
+  const websites = rankEvents(events, ["directory_website", "contractor_website"]);
+  const forms = rankEvents(events, ["form_launch"]);
+
+  return (
+    <div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+        <SectionLabel style={{ margin: 0 }}>App usage</SectionLabel>
+        <button onClick={() => setRefreshKey((k) => k + 1)} style={{ ...linkBtn, padding: 0 }}>Refresh</button>
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <StatCard icon={TrendingUp} label="Opens (last 7 days)" value={opensLast7} />
+        <StatCard icon={Smartphone} label="Opened from home screen" value={`${standalonePct}%`} />
+      </div>
+
+      <SectionLabel>Opens per day</SectionLabel>
+      <div style={{ ...card, display: "flex", alignItems: "flex-end", gap: 8, height: 90, marginBottom: 18 }}>
+        {dayBuckets.map((d) => (
+          <div key={d.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <div style={{ width: "100%", height: `${Math.max(4, (d.count / maxDay) * 54)}px`, background: C.green, borderRadius: 4 }} />
+            <span style={{ fontSize: 9.5, color: C.bark }}>{d.label}</span>
+          </div>
+        ))}
+      </div>
+
+      <RankList title="Most called — businesses" rows={calls} emptyText="No calls logged yet." />
+      <RankList title="Most navigated-to — businesses" rows={navs} emptyText="No directions taps logged yet." />
+      <RankList title="Most visited websites — businesses" rows={websites} emptyText="No website taps logged yet." />
+      <RankList title="Form launches" rows={forms} emptyText="No forms opened yet." />
+
+      <p style={{ fontSize: 11, color: C.bark, background: C.sandDeep, padding: "10px 12px", borderRadius: 10, lineHeight: 1.5 }}>
+        Counts come from every guest's device and update as people use the Hub. Notices aren't tracked individually since they all sit on one page — app opens capture that traffic instead.
+      </p>
+    </div>
+  );
+}
+
 function AdminSettings({ settings, setSettings }) {
   const update = (patch) => {
     const next = { ...settings, ...patch };
@@ -1815,6 +1946,13 @@ export default function TreeTopsHubApp() {
   const [adminTab, setAdminTab] = useState("notices");
 
   useEffect(() => {
+    const standalone =
+      (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      (typeof navigator !== "undefined" && navigator.standalone === true);
+    logEvent("app_open", standalone ? "standalone" : "browser");
+  }, []);
+
+  useEffect(() => {
     (async () => {
       const [n, f, i, s, d, dc, ww, ct, ctc] = await Promise.all([
         loadData("notices", SEED_NOTICES),
@@ -1853,7 +1991,8 @@ export default function TreeTopsHubApp() {
 
   if (adminMode === "portal") {
     let panel;
-    if (adminTab === "notices") panel = <AdminNotices notices={notices} setNotices={setNotices} />;
+    if (adminTab === "stats") panel = <AdminStats />;
+    else if (adminTab === "notices") panel = <AdminNotices notices={notices} setNotices={setNotices} />;
     else if (adminTab === "forms") panel = <AdminForms forms={forms} setForms={setForms} />;
     else if (adminTab === "directory") panel = <AdminDirectory directory={directory} setDirectory={setDirectory} categories={directoryCategories} setCategories={setDirectoryCategories} />;
     else if (adminTab === "info") panel = <AdminInfo info={info} setInfo={setInfo} />;
