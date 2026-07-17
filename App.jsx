@@ -1943,7 +1943,7 @@ export default function TreeTopsHubApp() {
   const [contractorCategories, setContractorCategories] = useState(SEED_CONTRACTOR_CATEGORIES);
 
   const [adminMode, setAdminMode] = useState(false); // false | "gate" | "portal"
-  const [adminTab, setAdminTab] = useState("notices");
+  const [adminTab, setAdminTab] = useState("stats");
 
   useEffect(() => {
     const standalone =
