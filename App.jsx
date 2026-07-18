@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.5.3";
+const APP_VERSION = "1.5.5";
 const BUILD_DATE = "18 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -268,21 +268,24 @@ function urlBase64ToUint8Array(base64String) {
 // after a guest opts in, and quietly on every app load (to refresh
 // last_seen_at and catch iOS's occasional silent subscription resets).
 async function savePushSubscription(sub) {
-  await fetch(`${SUPABASE_URL}/rest/v1/push_subscriptions?on_conflict=endpoint`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upsert_push_subscription`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json",
-      Prefer: "resolution=merge-duplicates,return=minimal",
     },
-    body: JSON.stringify([{
-      endpoint: sub.endpoint,
-      subscription: sub.toJSON(),
-      user_agent: navigator.userAgent,
-      last_seen_at: new Date().toISOString(),
-    }]),
+    body: JSON.stringify({
+      p_endpoint: sub.endpoint,
+      p_subscription: sub.toJSON(),
+      p_user_agent: navigator.userAgent,
+    }),
   });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(`Saving push subscription failed (${res.status}):`, text);
+    throw new Error(`Couldn't save subscription (${res.status})`);
+  }
 }
 
 // Calls the send-notice-push Edge Function to push a notice out to every
