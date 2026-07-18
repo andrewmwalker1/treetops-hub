@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.5.1";
+const APP_VERSION = "1.5.2";
 const BUILD_DATE = "18 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -283,6 +283,25 @@ async function savePushSubscription(sub) {
       last_seen_at: new Date().toISOString(),
     }]),
   });
+}
+
+// Calls the send-notice-push Edge Function to push a notice out to every
+// subscribed guest. Used both when a brand-new notice is saved (if the
+// "Notify guests" toggle is on) and from the manual "Notify" button on
+// any existing notice in the admin list.
+async function triggerNoticePush(noticeId, title, body) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notice-push`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ noticeId, title, body }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Send failed (${res.status})`);
+  return data; // { sent, failed, cleaned }
 }
 
 // Asks the browser for notification permission (must be called from a
@@ -1177,7 +1196,7 @@ function AdminInput({ label, value, onChange, textarea, placeholder, type = "tex
   );
 }
 
-function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown, disableUp, disableDown, featured, onToggleFeatured, featuredTitle = "Show on Home" }) {
+function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown, disableUp, disableDown, featured, onToggleFeatured, featuredTitle = "Show on Home", onNotify, notifying }) {
   return (
     <div style={{ ...card, display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
@@ -1194,6 +1213,11 @@ function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown
       </button>
       {onEdit && (
         <span style={{ fontSize: 11, fontWeight: 700, color: C.green, flexShrink: 0 }}>Edit</span>
+      )}
+      {onNotify && (
+        <button onClick={onNotify} disabled={notifying} title="Send a push notification for this notice" style={{ background: C.sandDeep, border: "none", borderRadius: 9, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: notifying ? "default" : "pointer", flexShrink: 0, opacity: notifying ? 0.5 : 1 }}>
+          <Bell size={15} color={C.green} />
+        </button>
       )}
       {onToggleFeatured && (
         <button onClick={onToggleFeatured} title={featuredTitle} style={{ background: featured ? "#FBF1DD" : C.sandDeep, border: "none", borderRadius: 9, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
@@ -1223,6 +1247,9 @@ function AdminNotices({ notices, setNotices }) {
   const [notify, setNotify] = useState(true);
   const [sending, setSending] = useState(false);
   const [sendResult, setSendResult] = useState("");
+  const [notifyingId, setNotifyingId] = useState(null);
+  const [notifyResultId, setNotifyResultId] = useState(null);
+  const [notifyResultText, setNotifyResultText] = useState("");
 
   const startEdit = (notice) => {
     setEditingId(notice.id);
@@ -1259,17 +1286,8 @@ function AdminNotices({ notices, setNotices }) {
       setSending(true);
       setSendResult("");
       try {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notice-push`, {
-          method: "POST",
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ noticeId, title: draft.title, body: draft.body }),
-        });
-        const data = await res.json().catch(() => ({}));
-        setSendResult(res.ok ? `Sent to ${data.sent ?? "?"} subscribed guests` : "Couldn't send the notification — the notice was saved either way.");
+        const data = await triggerNoticePush(noticeId, draft.title, draft.body);
+        setSendResult(`Sent to ${data.sent ?? "?"} subscribed guests`);
       } catch {
         setSendResult("Couldn't send the notification — the notice was saved either way.");
       } finally {
@@ -1277,6 +1295,19 @@ function AdminNotices({ notices, setNotices }) {
       }
     }
     startNew();
+  };
+  const notifyExisting = async (notice) => {
+    setNotifyingId(notice.id);
+    setNotifyResultId(null);
+    try {
+      const data = await triggerNoticePush(notice.id, notice.title, notice.body);
+      setNotifyResultText(`Sent to ${data.sent ?? "?"} subscribed guests`);
+    } catch {
+      setNotifyResultText("Couldn't send the notification.");
+    } finally {
+      setNotifyingId(null);
+      setNotifyResultId(notice.id);
+    }
   };
   const remove = (id) => {
     const next = notices.filter((n) => n.id !== id);
@@ -1346,19 +1377,25 @@ function AdminNotices({ notices, setNotices }) {
           }
         }
         return (
-          <AdminListItem
-            key={n.id}
-            title={n.title}
-            subtitle={`${n.link ? `${n.tag} · linked to blog` : n.tag}${dateNote}`}
-            onEdit={() => startEdit(n)}
-            onDelete={() => remove(n.id)}
-            onMoveUp={() => move(i, -1)}
-            onMoveDown={() => move(i, 1)}
-            disableUp={i === 0}
-            disableDown={i === notices.length - 1}
-            featured={!!n.featured}
-            onToggleFeatured={() => toggleFeatured(n.id)}
-          />
+          <div key={n.id}>
+            <AdminListItem
+              title={n.title}
+              subtitle={`${n.link ? `${n.tag} · linked to blog` : n.tag}${dateNote}`}
+              onEdit={() => startEdit(n)}
+              onDelete={() => remove(n.id)}
+              onMoveUp={() => move(i, -1)}
+              onMoveDown={() => move(i, 1)}
+              disableUp={i === 0}
+              disableDown={i === notices.length - 1}
+              featured={!!n.featured}
+              onToggleFeatured={() => toggleFeatured(n.id)}
+              onNotify={() => notifyExisting(n)}
+              notifying={notifyingId === n.id}
+            />
+            {notifyResultId === n.id && (
+              <p style={{ fontSize: 11, color: C.bark, margin: "-4px 0 8px 4px" }}>{notifyResultText}</p>
+            )}
+          </div>
         );
       })}
     </div>
