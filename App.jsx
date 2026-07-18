@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.5.2";
+const APP_VERSION = "1.5.3";
 const BUILD_DATE = "18 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -1288,8 +1288,9 @@ function AdminNotices({ notices, setNotices }) {
       try {
         const data = await triggerNoticePush(noticeId, draft.title, draft.body);
         setSendResult(`Sent to ${data.sent ?? "?"} subscribed guests`);
-      } catch {
-        setSendResult("Couldn't send the notification — the notice was saved either way.");
+      } catch (err) {
+        console.error("Notify guests failed:", err);
+        setSendResult(`Couldn't send the notification (${err.message}) — the notice was saved either way.`);
       } finally {
         setSending(false);
       }
@@ -1302,8 +1303,9 @@ function AdminNotices({ notices, setNotices }) {
     try {
       const data = await triggerNoticePush(notice.id, notice.title, notice.body);
       setNotifyResultText(`Sent to ${data.sent ?? "?"} subscribed guests`);
-    } catch {
-      setNotifyResultText("Couldn't send the notification.");
+    } catch (err) {
+      console.error("Notify existing notice failed:", err);
+      setNotifyResultText(`Couldn't send: ${err.message}`);
     } finally {
       setNotifyingId(null);
       setNotifyResultId(notice.id);
