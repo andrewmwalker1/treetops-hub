@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.5.5";
+const APP_VERSION = "1.6.0";
 const BUILD_DATE = "18 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -2425,6 +2425,18 @@ export default function TreeTopsHubApp() {
   const [adminMode, setAdminMode] = useState(false); // false | "gate" | "portal"
   const [adminTab, setAdminTab] = useState("stats");
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isOffline, setIsOffline] = useState(typeof navigator !== "undefined" && !navigator.onLine);
+
+  useEffect(() => {
+    const goOnline = () => setIsOffline(false);
+    const goOffline = () => setIsOffline(true);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   useEffect(() => {
     const mq = window.matchMedia("(display-mode: standalone)");
@@ -2465,14 +2477,20 @@ export default function TreeTopsHubApp() {
     if (formId) setActiveFormId(formId);
   };
 
+  const offlineBanner = isOffline ? (
+    <div style={{ background: "#3A2E1D", color: "#F5E9C8", fontSize: 11.5, fontWeight: 600, textAlign: "center", padding: "6px 10px" }}>
+      You're offline — showing the last saved info
+    </div>
+  ) : null;
+
   const frame = (inner) =>
     isStandalone ? (
       <div style={{ width: "100%", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ height: "100%", overflowY: "auto" }}>{inner}</div>
+        <div style={{ height: "100%", overflowY: "auto" }}>{offlineBanner}{inner}</div>
       </div>
     ) : (
       <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}`, boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
-        <div style={{ height: "100%", overflowY: "auto" }}>{inner}</div>
+        <div style={{ height: "100%", overflowY: "auto" }}>{offlineBanner}{inner}</div>
       </div>
     );
 
