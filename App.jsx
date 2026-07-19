@@ -30,8 +30,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.6.0";
-const BUILD_DATE = "18 Jul 2026";
+const APP_VERSION = "1.7.0";
+const BUILD_DATE = "19 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -335,18 +335,52 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-const MAX_LOGGED_EVENTS = 2000;
-
-// Fire-and-forget usage logging: reads the shared events log, appends one
-// entry, and writes it back. This is a lightweight approach suited to a
-// single-park app's traffic — not built for high concurrency.
+// Fire-and-forget usage logging: inserts one row into the dedicated
+// usage_events table (see 03-usage-events-table.sql). Each event is its
+// own row, so concurrent taps from different guests just become
+// concurrent inserts — nothing to race, unlike the old approach of
+// rewriting one shared JSON blob on every event.
 async function logEvent(type, label) {
   try {
-    const current = await loadData("events", []);
-    const next = [...current, { type, label, ts: Date.now() }].slice(-MAX_LOGGED_EVENTS);
-    saveData("events", next);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/usage_events`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify([{ type, label, ts: Date.now() }]),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`logEvent "${type}" failed (${res.status}):`, text);
+    }
+  } catch (err) {
+    console.error(`logEvent "${type}" failed (network error):`, err);
+  }
+}
+
+const MAX_LOADED_EVENTS = 5000;
+
+// Reads events back for the Admin → Stats screen. Ordered oldest-first to
+// match how the old app_data blob was built up (append-only), so the
+// day-bucketing/ranking logic below doesn't need to change.
+async function loadEvents() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/usage_events?select=type,label,ts&order=ts.asc&limit=${MAX_LOADED_EVENTS}`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!res.ok) return [];
+    return await res.json();
   } catch {
-    // usage logging should never block or break the guest experience
+    return [];
   }
 }
 
@@ -431,7 +465,7 @@ function HomeScreen({ go, notices, settings, directory, categories, welshWords }
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
           <QuickAction icon={ClipboardList} label={settings.quickAction1Label} onClick={() => go("forms")} />
           <QuickAction icon={Bell} label={settings.quickAction2Label} onClick={() => go("notices")} />
-          <QuickAction icon={PhoneCall} label="Emergency" onClick={() => go("emergency")} danger />
+          <QuickAction icon={PhoneCall} label="Emergency" onClick={() => { logEvent("emergency_navigate", "Emergency"); go("emergency"); }} danger />
         </div>
 
         <WeatherWidget />
@@ -888,14 +922,14 @@ function EmergencyContactCard({ item }) {
           <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.bark, lineHeight: 1.4 }}>{item.sub}</p>
         </div>
         {!hasAddress && (
-          <a href={telHref} style={{ flexShrink: 0, background: isDanger ? C.danger : C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 10, whiteSpace: "nowrap", textDecoration: "none" }}>
+          <a href={telHref} onClick={() => logEvent("emergency_call", item.title)} style={{ flexShrink: 0, background: isDanger ? C.danger : C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 10, whiteSpace: "nowrap", textDecoration: "none" }}>
             {item.phone}
           </a>
         )}
       </div>
       {hasAddress && (
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <a href={telHref} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none" }}>
+          <a href={telHref} onClick={() => logEvent("emergency_call", item.title)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none" }}>
             <PhoneCall size={14} /> Call
           </a>
           <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.white, color: C.green, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none", border: `1.5px solid ${C.green}` }}>
@@ -2296,7 +2330,7 @@ function AdminStats() {
 
   useEffect(() => {
     let cancelled = false;
-    loadData("events", []).then((data) => { if (!cancelled) setEvents(data); });
+    loadEvents().then((data) => { if (!cancelled) setEvents(data); });
     return () => { cancelled = true; };
   }, [refreshKey]);
 
@@ -2322,8 +2356,8 @@ function AdminStats() {
   });
   const maxDay = Math.max(1, ...dayBuckets.map((d) => d.count));
 
-  const calls = rankEvents(events, ["directory_call", "contractor_call"]);
-  const navs = rankEvents(events, ["directory_navigate", "contractor_navigate"]);
+  const calls = rankEvents(events, ["directory_call", "contractor_call", "emergency_call"]);
+  const navs = rankEvents(events, ["directory_navigate", "contractor_navigate", "emergency_navigate"]);
   const websites = rankEvents(events, ["directory_website", "contractor_website"]);
   const forms = rankEvents(events, ["form_launch"]);
 
