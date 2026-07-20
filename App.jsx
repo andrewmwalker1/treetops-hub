@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.8";
+const APP_VERSION = "1.9.9";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -765,7 +765,14 @@ function NoticeCarousel({ notices, speedSeconds }) {
             <NoticeCard notice={n} />
           </div>
         ))}
-        <NoticeCard notice={notices[index]} />
+        {/* key forces a fresh DOM node per slide rather than an in-place content
+            swap — the diagnostic build proved getComputedStyle/getBoundingClientRect
+            on the wrapper both correctly report the fixed height on every slide, yet
+            the painted pixels still didn't match it for a shorter slide. That's a
+            paint/compositing desync inside the overflow:hidden clip when content is
+            swapped in place, not a layout bug — forcing a genuinely new element
+            sidesteps it since there's no stale paint state to carry over. */}
+        <NoticeCard key={notices[index].id} notice={notices[index]} />
       </div>
       {/* TEMPORARY diagnostic readout — remove once the resize bug is confirmed fixed. */}
       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#fff", background: "rgba(11,92,56,0.9)", padding: "3px 6px", borderRadius: 4, marginTop: 4, wordBreak: "break-all" }}>
