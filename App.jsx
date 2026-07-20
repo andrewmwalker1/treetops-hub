@@ -5,7 +5,7 @@ import {
   Settings, LogOut, FileText, Calendar, ShieldCheck, ChevronUp, ChevronDown, Star,
   Compass, Search, Globe, PawPrint, X, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle,
   CloudRain, CloudSnow, CloudLightning, Languages, Navigation, Wrench,
-  TrendingUp, Smartphone, BarChart3,
+  Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload, Users,
 } from "lucide-react";
 
 // ---- Brand tokens ----
@@ -30,10 +30,10 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.2.1";
-const BUILD_DATE = "15 Jul 2026";
+const APP_VERSION = "1.8.0";
+const BUILD_DATE = "20 Jul 2026";
 
-const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck };
+const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
 
 function Horizon({ height = 64, color = C.green, bg = C.sand }) {
@@ -61,13 +61,12 @@ const SEED_FORMS = [
 ];
 
 const SEED_INFO = [
-  { id: "i1", icon: "wifi", title: "WiFi guide", body: "Free WiFi is available across most of the park. Premium streaming-grade WiFi can be added for a small extra charge — ask at the office." },
-  { id: "i2", icon: "zap", title: "EV charging", body: "Our 22kW charge point (near Reception) supports up to two vehicles at once. Pay-as-you-go via the on-unit reader." },
-  { id: "i3", icon: "phone", title: "Emergency contact", body: "Office hours: 9am–5pm daily. Out of hours emergency line: 01745 560279, option 2." },
-  { id: "i4", icon: "map", title: "Places to visit", body: "Talacre & Barkby beaches, Prestatyn town, and the North Wales coastal path are all a short drive away — ask reception for our full guide." },
+  { id: "i5", icon: "clock", title: "Office hours", body: "9am–5pm, every day. We occasionally close for a day or two over Christmas — check Notices for exact dates.", pdfLink: "" },
+  { id: "i1", icon: "wifi", title: "WiFi guide", body: "Free WiFi is available across most of the park. Premium streaming-grade WiFi can be added for a small extra charge — ask at the office.", pdfLink: "" },
+  { id: "i2", icon: "zap", title: "EV charging", body: "Our 22kW charge point (near Reception) supports up to two vehicles at once. Pay-as-you-go via the on-unit reader.", pdfLink: "" },
 ];
 
-const SEED_CONTRACTORS = [{"name": "ASI Engineering", "phone": "01244 470704 / 07791 218567", "notes": "Chester — repairs most appliances, except dishwashers", "id": "c1", "categoryId": "ccat_appliance_repair", "address": ""}, {"name": "Anderson's Blinds", "phone": "01745 583410", "notes": "Saint Asaph", "id": "c2", "categoryId": "ccat_blinds_curtains", "address": ""}, {"name": "Curtain Up", "phone": "01745 851000", "notes": "Prestatyn", "id": "c3", "categoryId": "ccat_blinds_curtains", "address": ""}, {"name": "Luce Buttons", "phone": "07979 240331", "notes": "Trelawnyd — sewing specialist", "id": "c4", "categoryId": "ccat_curtains_clothing", "address": ""}, {"name": "CMT — Carly Thomas", "phone": "07837 062228", "notes": "", "id": "c5", "categoryId": "ccat_caravan_cleaning", "address": ""}, {"name": "Mike Joyce Caravan Repairs & Maintenance", "phone": "07812 180176", "notes": "", "id": "c6", "categoryId": "ccat_caravan_repairs", "address": ""}, {"name": "Stuart Green Caravan Repairs & Maintenance", "phone": "07710 467040", "notes": "", "id": "c7", "categoryId": "ccat_caravan_repairs", "address": ""}, {"name": "C.M. Thomas", "phone": "07929 068707", "notes": "", "id": "c8", "categoryId": "ccat_carpets", "address": ""}, {"name": "AB Sundecks", "phone": "01745 560279", "notes": "Order via the Tree Tops office", "id": "c9", "categoryId": "ccat_decking", "address": ""}, {"name": "Harold Turnbull (TES)", "phone": "07731 191984", "notes": "", "id": "c10", "categoryId": "ccat_electrician", "address": ""}, {"name": "Kevin Edwards", "phone": "07873 328248", "notes": "", "id": "c11", "categoryId": "ccat_electrician", "address": ""}, {"name": "Kevin Parry Plumbing & Heating", "phone": "07985 420709", "notes": "", "id": "c12", "categoryId": "ccat_plumber", "address": ""}, {"name": "Gordon Overthrow Glazing", "phone": "01745 571495", "notes": "", "id": "c13", "categoryId": "ccat_double_glazing", "address": ""}, {"name": "Andrew Overthrow", "phone": "07747 697669", "notes": "", "id": "c14", "categoryId": "ccat_double_glazing", "address": ""}, {"name": "Tree Tops Office", "phone": "01745 560279", "notes": "Call the office if you have a problem with your TV", "id": "c15", "categoryId": "ccat_televisions", "address": ""}, {"name": "WiFi Support Hotline (airCube only)", "phone": "0330 320 9179", "notes": "Only for guests who signed up to airCube WiFi", "id": "c16", "categoryId": "ccat_tv_wifi_support", "address": ""}, {"name": "Glan Clwyd Hospital & A&E", "phone": "01745 583910", "notes": "", "id": "c17", "categoryId": "ccat_medical", "address": "Rhuddlan Road, Rhyl LL18 5UJ"}, {"name": "Prestatyn Surgery", "phone": "01745 886444", "notes": "Doctor", "id": "c18", "categoryId": "ccat_medical", "address": "Ffordd Pendyffryn, Prestatyn LL19 9DH"}, {"name": "Holywell Hospital MIU", "phone": "01352 710529", "notes": "Minor Injury Unit", "id": "c19", "categoryId": "ccat_medical", "address": "Halkyn Road, Holywell CH8 7GA"}, {"name": "All Pets", "phone": "01745 853366", "notes": "", "id": "c20", "categoryId": "ccat_vet", "address": "Ffordd Pendyffryn, Prestatyn LL19 9DG"}, {"name": "Octavia Taxis", "phone": "01745 797879 / 01745 797878", "notes": "", "id": "c21", "categoryId": "ccat_taxi", "address": ""}, {"name": "Fin Cabs", "phone": "01745 294433 / 07557 141905", "notes": "Prestatyn — airport transfer specialist", "id": "c22", "categoryId": "ccat_taxi", "address": ""}, {"name": "Celtic Cars", "phone": "01745 854462", "notes": "", "id": "c23", "categoryId": "ccat_car_sales_repairs", "address": "Meliden Road, Prestatyn LL19 9RT"}];
+const SEED_CONTRACTORS = [{"name": "ASI Engineering", "phone": "01244 470704 / 07791 218567", "notes": "Chester — repairs most appliances, except dishwashers", "id": "c1", "categoryId": "ccat_appliance_repair", "address": ""}, {"name": "Anderson's Blinds", "phone": "01745 583410", "notes": "Saint Asaph", "id": "c2", "categoryId": "ccat_blinds_curtains", "address": ""}, {"name": "Curtain Up", "phone": "01745 851000", "notes": "Prestatyn", "id": "c3", "categoryId": "ccat_blinds_curtains", "address": ""}, {"name": "Luce Buttons", "phone": "07979 240331", "notes": "Trelawnyd — sewing specialist", "id": "c4", "categoryId": "ccat_curtains_clothing", "address": ""}, {"name": "CMT — Carly Thomas", "phone": "07837 062228", "notes": "", "id": "c5", "categoryId": "ccat_caravan_cleaning", "address": ""}, {"name": "Mike Joyce Caravan Repairs & Maintenance", "phone": "07812 180176", "notes": "", "id": "c6", "categoryId": "ccat_caravan_repairs", "address": ""}, {"name": "Stuart Green Caravan Repairs & Maintenance", "phone": "07710 467040", "notes": "", "id": "c7", "categoryId": "ccat_caravan_repairs", "address": ""}, {"name": "C.M. Thomas", "phone": "07929 068707", "notes": "", "id": "c8", "categoryId": "ccat_carpets", "address": ""}, {"name": "AB Sundecks", "phone": "01745 560279", "notes": "Order via the Tree Tops office", "id": "c9", "categoryId": "ccat_decking", "address": ""}, {"name": "Harold Turnbull (TES)", "phone": "07731 191984", "notes": "", "id": "c10", "categoryId": "ccat_electrician", "address": ""}, {"name": "Kevin Edwards", "phone": "07873 328248", "notes": "", "id": "c11", "categoryId": "ccat_electrician", "address": ""}, {"name": "Kevin Parry Plumbing & Heating", "phone": "07985 420709", "notes": "", "id": "c12", "categoryId": "ccat_plumber", "address": "", "starred": true}, {"name": "Gordon Overthrow Glazing", "phone": "01745 571495", "notes": "", "id": "c13", "categoryId": "ccat_double_glazing", "address": ""}, {"name": "Andrew Overthrow", "phone": "07747 697669", "notes": "", "id": "c14", "categoryId": "ccat_double_glazing", "address": ""}, {"name": "Tree Tops Office", "phone": "01745 560279", "notes": "Call the office if you have a problem with your TV", "id": "c15", "categoryId": "ccat_televisions", "address": ""}, {"name": "WiFi Support Hotline (airCube only)", "phone": "0330 320 9179", "notes": "Only for guests who signed up to airCube WiFi", "id": "c16", "categoryId": "ccat_tv_wifi_support", "address": ""}, {"name": "Glan Clwyd Hospital & A&E", "phone": "01745 583910", "notes": "", "id": "c17", "categoryId": "ccat_medical", "address": "Rhuddlan Road, Rhyl LL18 5UJ"}, {"name": "Prestatyn Surgery", "phone": "01745 886444", "notes": "Doctor", "id": "c18", "categoryId": "ccat_medical", "address": "Ffordd Pendyffryn, Prestatyn LL19 9DH"}, {"name": "Holywell Hospital MIU", "phone": "01352 710529", "notes": "Minor Injury Unit", "id": "c19", "categoryId": "ccat_medical", "address": "Halkyn Road, Holywell CH8 7GA"}, {"name": "All Pets", "phone": "01745 853366", "notes": "", "id": "c20", "categoryId": "ccat_vet", "address": "Ffordd Pendyffryn, Prestatyn LL19 9DG"}, {"name": "Octavia Taxis", "phone": "01745 797879 / 01745 797878", "notes": "", "id": "c21", "categoryId": "ccat_taxi", "address": ""}, {"name": "Fin Cabs", "phone": "01745 294433 / 07557 141905", "notes": "Prestatyn — airport transfer specialist", "id": "c22", "categoryId": "ccat_taxi", "address": ""}, {"name": "Celtic Cars", "phone": "01745 854462", "notes": "", "id": "c23", "categoryId": "ccat_car_sales_repairs", "address": "Meliden Road, Prestatyn LL19 9RT"}];
 
 const SEED_CONTRACTOR_CATEGORIES = [{"id": "ccat_electrician", "name": "Electrician"}, {"id": "ccat_plumber", "name": "Plumber"}, {"id": "ccat_caravan_repairs", "name": "Caravan Repairs"}, {"id": "ccat_medical", "name": "Medical"}, {"id": "ccat_vet", "name": "Vet"}, {"id": "ccat_taxi", "name": "Taxi"}, {"id": "ccat_appliance_repair", "name": "Appliance Repair"}, {"id": "ccat_blinds_curtains", "name": "Blinds & Curtains"}, {"id": "ccat_car_sales_repairs", "name": "Car Sales & Repairs"}, {"id": "ccat_caravan_cleaning", "name": "Caravan Cleaning"}, {"id": "ccat_carpets", "name": "Carpets"}, {"id": "ccat_curtains_clothing", "name": "Curtains & Clothing"}, {"id": "ccat_decking", "name": "Decking"}, {"id": "ccat_double_glazing", "name": "Double Glazing"}, {"id": "ccat_tv_wifi_support", "name": "TV & WiFi Support"}, {"id": "ccat_televisions", "name": "Televisions"}];
 
@@ -93,6 +92,19 @@ const SEED_WELSH_WORDS = [
   { id: "w19", welsh: "Bendigedig", english: "Wonderful" },
   { id: "w20", welsh: "Croeso cynnes", english: "A warm welcome" },
 ];
+
+// "locked" entries are national numbers shown for context but not editable
+// in admin, so staff can't accidentally mistype 999 or similar.
+const SEED_EMERGENCY_CONTACTS = [
+  { id: "ec1", section: "park", title: "Tree Tops out-of-hours line", sub: "Gas, electric, security, urgent site issues", phone: "01745 560279", address: "", locked: false },
+  { id: "ec2", section: "medical", title: "999", sub: "Life-threatening emergency — ambulance, fire, police", phone: "999", address: "", locked: true },
+  { id: "ec3", section: "medical", title: "Glan Clwyd Hospital A&E", sub: "Rhuddlan Road, Rhyl LL18 5UJ", phone: "01745 583910", address: "Rhuddlan Road, Rhyl LL18 5UJ", locked: false },
+  { id: "ec4", section: "medical", title: "Holywell Hospital MIU", sub: "Minor Injury Unit, Halkyn Road", phone: "01352 710529", address: "Halkyn Road, Holywell CH8 7GA", locked: false },
+  { id: "ec5", section: "medical", title: "NHS 111", sub: "Non-emergency medical advice", phone: "111", address: "", locked: true },
+  { id: "ec6", section: "police", title: "North Wales Police (non-emergency)", sub: "Report a crime that isn't in progress", phone: "101", address: "", locked: true },
+];
+const EMERGENCY_SECTION_LABELS = { park: "Park emergency", medical: "Medical", police: "Police" };
+const EMERGENCY_SECTION_ORDER = ["park", "medical", "police"];
 
 function wordOfTheDay(words) {
   if (!words.length) return null;
@@ -132,8 +144,6 @@ const SEED_SETTINGS = {
   badge: "5★",
   quickAction1Label: "View forms",
   quickAction2Label: "Park notices",
-  officeHours: "Open today, 9am – 5pm",
-  emergencyLine: "Out of hours: 01745 560279, option 2",
   aboutText: "Family-run since 1960, hillside views over the Dee Estuary, and a David Bellamy Gold Conservation Award.",
   aboutLink: "",
 };
@@ -151,6 +161,11 @@ const CATEGORY_NAME = (categories, id) => (categories.find((c) => c.id === id)?.
 // persistent, shared storage (not per-device).
 const SUPABASE_URL = "https://qkbpsqlrzygcairtidye.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrYnBzcWxyenlnY2FpcnRpZHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMzIzNTYsImV4cCI6MjA5OTYwODM1Nn0.8v079nsYm6YlMBa5X41IP2NK7qP1uozJoGnB74ORWbg";
+
+// Public half of the VAPID key pair used for Web Push. Safe to expose —
+// it's the whole point of it. The private half lives only as a Supabase
+// Edge Function secret and is never shipped to the browser.
+const VAPID_PUBLIC_KEY = "BNtmX0wjCozHGVFUV_iT-Cx9s_crCIApDZ038BXb8_Na9UJfBa2Fsqbp42i4d3ip7iDMvwWrJn5LsYegMPH7uVM";
 
 async function loadData(key, fallback) {
   try {
@@ -214,22 +229,209 @@ async function saveData(key, value) {
   }
 }
 
+// Storage bucket for admin-uploaded PDF guides. Must be created as a PUBLIC
+// bucket in the Supabase project (Storage → New bucket → name "info-pdfs" →
+// toggle "Public bucket" on) before uploads will work.
+const PDF_STORAGE_BUCKET = "info-pdfs";
+
+// Uploads a PDF to Supabase Storage and returns its public URL, or throws
+// with a readable message on failure (e.g. bucket missing, policy denies it).
+async function uploadPdfToStorage(file) {
+  const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "-");
+  const path = `${Date.now()}-${uid()}-${safeName}`;
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${PDF_STORAGE_BUCKET}/${path}`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": file.type || "application/pdf",
+    },
+    body: file,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Upload failed (${res.status}): ${text || "check the bucket exists and is public"}`);
+  }
+  return `${SUPABASE_URL}/storage/v1/object/public/${PDF_STORAGE_BUCKET}/${path}`;
+}
+
+// Converts the VAPID public key from base64url (how it's normally shared)
+// into the Uint8Array format the browser's Push API expects.
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+// Upserts the current push subscription into Supabase. Called both right
+// after a guest opts in, and quietly on every app load (to refresh
+// last_seen_at and catch iOS's occasional silent subscription resets).
+async function savePushSubscription(sub) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/upsert_push_subscription`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      p_endpoint: sub.endpoint,
+      p_subscription: sub.toJSON(),
+      p_user_agent: navigator.userAgent,
+      p_device_id: getDeviceId(),
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    console.error(`Saving push subscription failed (${res.status}):`, text);
+    throw new Error(`Couldn't save subscription (${res.status})`);
+  }
+}
+
+// Calls the send-notice-push Edge Function to push a notice out to every
+// subscribed guest. Used both when a brand-new notice is saved (if the
+// "Notify guests" toggle is on) and from the manual "Notify" button on
+// any existing notice in the admin list.
+async function triggerNoticePush(noticeId, title, body) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notice-push`, {
+    method: "POST",
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ noticeId, title, body }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Send failed (${res.status})`);
+  return data; // { sent, failed, cleaned }
+}
+
+// Asks the browser for notification permission (must be called from a
+// user gesture — e.g. a button tap, not on page load) and subscribes.
+// Returns true on success, false if the guest declined or it's unsupported.
+async function subscribeToPush() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return false;
+  const permission = await Notification.requestPermission();
+  if (permission !== "granted") return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+    await savePushSubscription(sub);
+    return true;
+  } catch (err) {
+    console.error("Push subscription failed:", err);
+    return false;
+  }
+}
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-const MAX_LOGGED_EVENTS = 2000;
+// Anonymous, per-device identifier — created once on first launch and
+// persisted in localStorage. Not tied to any personal info; exists purely
+// so Admin → Stats can count distinct devices (active users, notification
+// opt-in rate) instead of raw event counts. Safe to lose (e.g. guest clears
+// site data) — worst case they're just counted as a "new" device next time.
+const DEVICE_ID_KEY = "hub_device_id";
+function getDeviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : uid() + uid();
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    // localStorage unavailable (e.g. private mode edge cases) — fall back to
+    // a session-only id rather than breaking event logging entirely.
+    return "no-storage-" + uid();
+  }
+}
 
-// Fire-and-forget usage logging: reads the shared events log, appends one
-// entry, and writes it back. This is a lightweight approach suited to a
-// single-park app's traffic — not built for high concurrency.
+// Fire-and-forget usage logging: inserts one row into the dedicated
+// usage_events table (see 03-usage-events-table.sql). Each event is its
+// own row, so concurrent taps from different guests just become
+// concurrent inserts — nothing to race, unlike the old approach of
+// rewriting one shared JSON blob on every event.
 async function logEvent(type, label) {
   try {
-    const current = await loadData("events", []);
-    const next = [...current, { type, label, ts: Date.now() }].slice(-MAX_LOGGED_EVENTS);
-    saveData("events", next);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/usage_events`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify([{ type, label, ts: Date.now(), device_id: getDeviceId() }]),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error(`logEvent "${type}" failed (${res.status}):`, text);
+    }
+  } catch (err) {
+    console.error(`logEvent "${type}" failed (network error):`, err);
+  }
+}
+
+const MAX_LOADED_EVENTS = 5000;
+
+// Reads events back for the Admin → Stats screen. Ordered oldest-first to
+// match how the old app_data blob was built up (append-only), so the
+// day-bucketing/ranking logic below doesn't need to change.
+async function loadEvents() {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/usage_events?select=type,label,ts&order=ts.asc&limit=${MAX_LOADED_EVENTS}`,
+      {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      }
+    );
+    if (!res.ok) return [];
+    return await res.json();
   } catch {
-    // usage logging should never block or break the guest experience
+    return [];
+  }
+}
+
+// Reads aggregate stats (active devices, notification subscribers/opt-in
+// rate, busiest-times heatmap) via a security-definer RPC. Computed
+// server-side over the *full* usage_events/push_subscriptions tables, so
+// unlike loadEvents() these numbers aren't affected by MAX_LOADED_EVENTS.
+async function loadAdminStats() {
+  const fallback = {
+    push_subscribers: 0,
+    active_devices_7d: 0,
+    notif_devices_7d: 0,
+    heatmap: [],
+  };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_admin_stats`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    return { ...fallback, ...data };
+  } catch {
+    return fallback;
   }
 }
 
@@ -311,9 +513,10 @@ function HomeScreen({ go, notices, settings, directory, categories, welshWords }
       </div>
       <div style={{ height: 3, background: C.greenBright }} />
       <div style={{ padding: "16px 20px 100px", background: C.sand }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, marginBottom: 18 }}>
           <QuickAction icon={ClipboardList} label={settings.quickAction1Label} onClick={() => go("forms")} />
           <QuickAction icon={Bell} label={settings.quickAction2Label} onClick={() => go("notices")} />
+          <QuickAction icon={PhoneCall} label="Emergency" onClick={() => { logEvent("emergency_navigate", "Emergency"); go("emergency"); }} danger />
         </div>
 
         <WeatherWidget />
@@ -346,24 +549,26 @@ function HomeScreen({ go, notices, settings, directory, categories, welshWords }
             <button onClick={() => go("directory")} style={linkBtn}>Explore more places <ChevronRight size={15} /></button>
           </>
         )}
-
-        <SectionLabel style={{ marginTop: 24 }}>Office & emergency</SectionLabel>
-        <div style={card}>
-          <p style={{ margin: 0, fontSize: 14, color: C.ink, fontWeight: 600 }}>{settings.officeHours}</p>
-          <p style={{ margin: "4px 0 0", fontSize: 13.5, color: C.bark }}>{settings.emergencyLine}</p>
-        </div>
       </div>
     </div>
   );
 }
 
-function QuickAction({ icon: Icon, label, onClick }) {
+function QuickAction({ icon: Icon, label, onClick, danger }) {
   return (
-    <button onClick={onClick} style={{ background: C.white, border: `1.5px solid ${C.sandDeep}`, borderRadius: 14, padding: "16px 14px", display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 10, cursor: "pointer", textAlign: "left" }}>
-      <div style={{ width: 34, height: 34, borderRadius: 10, background: C.sandDeep, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <Icon size={17} color={C.green} />
+    <button
+      onClick={onClick}
+      style={{
+        background: danger ? "#FBEDE8" : C.white,
+        border: `1.5px solid ${danger ? C.danger : C.sandDeep}`,
+        borderRadius: 14, padding: "16px 14px", display: "flex", flexDirection: "column",
+        alignItems: "flex-start", gap: 10, cursor: "pointer", textAlign: "left",
+      }}
+    >
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: danger ? "#F6E2DC" : C.sandDeep, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Icon size={17} color={danger ? C.danger : C.green} />
       </div>
-      <span style={{ fontSize: 13.5, fontWeight: 600, color: C.ink, lineHeight: 1.25 }}>{label}</span>
+      <span style={{ fontSize: 13.5, fontWeight: 600, color: danger ? C.danger : C.ink, lineHeight: 1.25 }}>{label}</span>
     </button>
   );
 }
@@ -745,6 +950,96 @@ function ContractorsScreen({ contractors, categories }) {
   );
 }
 
+function EmergencyContactCard({ item }) {
+  const isDanger = item.title === "999";
+  const hasAddress = Boolean(item.address);
+  const telHref = `tel:${item.phone.replace(/\s+/g, "")}`;
+  const mapsHref = hasAddress ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address + ", Wales")}` : null;
+  const Icon = item.section === "medical" ? Stethoscope : item.section === "police" ? ShieldCheck : PhoneCall;
+  const iconBg = isDanger ? "#F6E2DC" : "#E1F5E7";
+  const iconColor = isDanger ? C.danger : C.green;
+
+  return (
+    <div style={{ ...card, marginBottom: 10, border: isDanger ? `1.5px solid ${C.danger}` : card.border }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 13 }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: iconBg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <Icon size={18} color={iconColor} />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            {item.starred && <Star size={12} color={C.gold} fill={C.gold} />}
+            <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>{item.title}</p>
+          </div>
+          <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.bark, lineHeight: 1.4 }}>{item.sub}</p>
+        </div>
+        {!hasAddress && (
+          <a href={telHref} onClick={() => logEvent("emergency_call", item.title)} style={{ flexShrink: 0, background: isDanger ? C.danger : C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 10, whiteSpace: "nowrap", textDecoration: "none" }}>
+            {item.phone}
+          </a>
+        )}
+      </div>
+      {hasAddress && (
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <a href={telHref} onClick={() => logEvent("emergency_call", item.title)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none" }}>
+            <PhoneCall size={14} /> Call
+          </a>
+          <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.white, color: C.green, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none", border: `1.5px solid ${C.green}` }}>
+            <Navigation size={14} /> Directions
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EmergencyContactsScreen({ contacts, contractors, contractorCategories, onBack }) {
+  const starredContractors = contractors.filter((c) => c.starred);
+
+  return (
+    <div>
+      <div style={{ padding: "18px 20px 10px", display: "flex", alignItems: "center", gap: 10 }}>
+        <button onClick={onBack} style={backBtn}><ChevronLeft size={20} color={C.ink} /></button>
+        <h2 style={{ fontFamily: displayFont, fontSize: 19, color: C.ink, margin: 0 }}>Emergency contacts</h2>
+      </div>
+      <div style={{ padding: "4px 20px 100px" }}>
+        <p style={{ fontSize: 11.5, color: C.bark, background: C.sandDeep, padding: "9px 12px", borderRadius: 10, marginBottom: 6, lineHeight: 1.4, display: "flex", gap: 8, alignItems: "flex-start" }}>
+          <Info size={14} color={C.bark} style={{ flexShrink: 0, marginTop: 1 }} />
+          Tap any number to call straight away. In a life-threatening emergency, always dial 999 first.
+        </p>
+
+        {EMERGENCY_SECTION_ORDER.slice(0, 2).map((section) => (
+          <div key={section}>
+            <SectionLabel style={{ marginTop: 18 }}>{EMERGENCY_SECTION_LABELS[section]}</SectionLabel>
+            {contacts.filter((c) => c.section === section).map((item) => <EmergencyContactCard key={item.id} item={item} />)}
+          </div>
+        ))}
+
+        {starredContractors.length > 0 && (
+          <>
+            <SectionLabel style={{ marginTop: 18 }}>Recommended contractors</SectionLabel>
+            <p style={{ fontSize: 12, color: C.bark, margin: "-4px 0 10px", lineHeight: 1.4 }}>
+              Starred from the Contractors directory — see the full list under Contractors.
+            </p>
+            {starredContractors.map((c) => (
+              <EmergencyContactCard
+                key={c.id}
+                item={{ id: c.id, section: "park", title: c.name, sub: `Starred contractor — ${CATEGORY_NAME(contractorCategories, c.categoryId)}`, phone: c.phone.split("/")[0].trim(), address: c.address || "", starred: true }}
+              />
+            ))}
+          </>
+        )}
+
+        {EMERGENCY_SECTION_ORDER.slice(2).map((section) => (
+          <div key={section}>
+            <SectionLabel style={{ marginTop: 18 }}>{EMERGENCY_SECTION_LABELS[section]}</SectionLabel>
+            {contacts.filter((c) => c.section === section).map((item) => <EmergencyContactCard key={item.id} item={item} />)}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function FormsListScreen({ go, forms }) {
   return (
     <div style={{ padding: "20px 20px 100px", background: C.sand, minHeight: "100%" }}>
@@ -770,6 +1065,84 @@ function FormsListScreen({ go, forms }) {
   );
 }
 
+function PushNotificationsToggle() {
+  const [status, setStatus] = useState("checking"); // checking | unsupported | off | on | busy | denied
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setStatus("unsupported");
+      return;
+    }
+    if (Notification.permission === "denied") {
+      setStatus("denied");
+      return;
+    }
+    navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription()).then((sub) => {
+      setStatus(sub ? "on" : "off");
+      if (sub) savePushSubscription(sub); // quietly refresh last_seen_at
+    });
+  }, []);
+
+  const enable = async () => {
+    setStatus("busy");
+    setError("");
+    try {
+      const ok = await subscribeToPush();
+      if (ok) setStatus("on");
+      else {
+        setStatus(Notification.permission === "denied" ? "denied" : "off");
+        if (Notification.permission !== "denied") setError("Couldn't turn on notifications — please try again.");
+      }
+    } catch (err) {
+      console.error("Enable notifications failed:", err);
+      setStatus("off");
+      setError("Something went wrong turning notifications on — check the browser console for details.");
+    }
+  };
+
+  const disable = async () => {
+    setStatus("busy");
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) await sub.unsubscribe();
+    setStatus("off");
+  };
+
+  if (status === "unsupported") return null;
+
+  const isIOSNotStandalone =
+    /iPhone|iPad|iPod/.test(navigator.userAgent) &&
+    !(window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true);
+
+  return (
+    <div style={{ ...card, marginTop: 22, marginBottom: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink, display: "flex", alignItems: "center", gap: 6 }}>
+            <Bell size={15} color={C.green} /> Push notifications
+          </p>
+          <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.bark }}>Get notified about new notices, like pool closures or events.</p>
+        </div>
+        {status === "on" ? (
+          <button onClick={disable} style={{ background: C.green, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, color: C.white, cursor: "pointer", flexShrink: 0 }}>On</button>
+        ) : (
+          <button onClick={enable} disabled={status === "busy" || isIOSNotStandalone} style={{ background: C.sandDeep, border: "none", borderRadius: 10, padding: "8px 14px", fontSize: 12.5, fontWeight: 700, color: C.ink, cursor: status === "busy" ? "default" : "pointer", flexShrink: 0, opacity: status === "busy" ? 0.6 : 1 }}>
+            {status === "busy" ? "…" : "Turn on"}
+          </button>
+        )}
+      </div>
+      {status === "denied" && (
+        <p style={{ fontSize: 11.5, color: C.bark, margin: "10px 0 0" }}>Notifications are blocked for this app in your device settings — you'll need to allow them there before this toggle will work.</p>
+      )}
+      {isIOSNotStandalone && status !== "denied" && (
+        <p style={{ fontSize: 11.5, color: C.bark, margin: "10px 0 0" }}>On iPhone, add Tree Tops Hub to your Home Screen first (tap Share, then "Add to Home Screen") — notifications only work once it's installed.</p>
+      )}
+      {error && <p style={{ fontSize: 11.5, color: "#B3261E", margin: "10px 0 0" }}>{error}</p>}
+    </div>
+  );
+}
+
 function MoreScreen({ onAdminTap, info, settings }) {
   return (
     <div style={{ padding: "20px 20px 100px", background: C.sand, minHeight: "100%" }}>
@@ -787,10 +1160,17 @@ function MoreScreen({ onAdminTap, info, settings }) {
             <div>
               <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>{item.title}</p>
               <p style={{ margin: "3px 0 0", fontSize: 13, color: C.bark, lineHeight: 1.45 }}>{item.body}</p>
+              {item.pdfLink && (
+                <a href={item.pdfLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 8, fontSize: 12.5, fontWeight: 700, color: C.green, textDecoration: "none" }}>
+                  <FileText size={13} /> View PDF guide <ChevronRight size={13} />
+                </a>
+              )}
             </div>
           </div>
         );
       })}
+
+      <PushNotificationsToggle />
 
       <SectionLabel style={{ marginTop: 22 }}>About</SectionLabel>
       <div style={card}>
@@ -828,7 +1208,7 @@ function AdminGate({ onSuccess, onCancel }) {
   };
 
   return (
-    <div style={{ padding: "60px 24px", background: C.ink, minHeight: 700, display: "flex", flexDirection: "column", alignItems: "center" }}>
+    <div style={{ padding: "60px 24px", background: C.ink, minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
       <div style={{ background: C.white, borderRadius: 12, padding: "8px 16px", marginBottom: 24 }}>
         <img src={LOGO_DATA_URI} alt="Tree Tops Caravan Park" style={{ height: 34, width: "auto", display: "block" }} />
       </div>
@@ -861,13 +1241,14 @@ function AdminShell({ children, tab, setTab, onExit }) {
     { key: "forms", label: "Forms" },
     { key: "directory", label: "Directory" },
     { key: "contractors", label: "Contractors" },
+    { key: "emergency", label: "Emergency" },
     { key: "info", label: "Info" },
     { key: "welsh", label: "Welsh Word" },
     { key: "settings", label: "Settings" },
   ];
   return (
-    <div style={{ minHeight: 700, background: C.sand }}>
-      <div style={{ background: C.ink, padding: "18px 20px 0" }}>
+    <div style={{ minHeight: "100%", background: C.sand }}>
+      <div style={{ background: C.ink, padding: "18px 20px 0", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
           <h2 style={{ fontFamily: displayFont, color: C.white, fontSize: 19, margin: 0 }}>Admin portal</h2>
           <button onClick={onExit} style={{ background: "rgba(255,255,255,0.1)", border: "none", borderRadius: 10, padding: "7px 10px", display: "flex", alignItems: "center", gap: 6, color: C.white, fontSize: 12, cursor: "pointer" }}>
@@ -903,7 +1284,7 @@ function AdminInput({ label, value, onChange, textarea, placeholder, type = "tex
   );
 }
 
-function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown, disableUp, disableDown, featured, onToggleFeatured }) {
+function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown, disableUp, disableDown, featured, onToggleFeatured, featuredTitle = "Show on Home", onNotify, notifying }) {
   return (
     <div style={{ ...card, display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
@@ -921,8 +1302,13 @@ function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown
       {onEdit && (
         <span style={{ fontSize: 11, fontWeight: 700, color: C.green, flexShrink: 0 }}>Edit</span>
       )}
+      {onNotify && (
+        <button onClick={onNotify} disabled={notifying} title="Send a push notification for this notice" style={{ background: C.sandDeep, border: "none", borderRadius: 9, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: notifying ? "default" : "pointer", flexShrink: 0, opacity: notifying ? 0.5 : 1 }}>
+          <Bell size={15} color={C.green} />
+        </button>
+      )}
       {onToggleFeatured && (
-        <button onClick={onToggleFeatured} title="Show on Home" style={{ background: featured ? "#FBF1DD" : C.sandDeep, border: "none", borderRadius: 9, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
+        <button onClick={onToggleFeatured} title={featuredTitle} style={{ background: featured ? "#FBF1DD" : C.sandDeep, border: "none", borderRadius: 9, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
           <Star size={15} color={featured ? C.gold : C.bark} fill={featured ? C.gold : "none"} />
         </button>
       )}
@@ -946,6 +1332,12 @@ const EMPTY_NOTICE = { tag: "", title: "", body: "", link: "", startDate: "", en
 function AdminNotices({ notices, setNotices }) {
   const [editingId, setEditingId] = useState(null); // null = adding new
   const [draft, setDraft] = useState(EMPTY_NOTICE);
+  const [notify, setNotify] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState("");
+  const [notifyingId, setNotifyingId] = useState(null);
+  const [notifyResultId, setNotifyResultId] = useState(null);
+  const [notifyResultText, setNotifyResultText] = useState("");
 
   const startEdit = (notice) => {
     setEditingId(notice.id);
@@ -957,23 +1349,55 @@ function AdminNotices({ notices, setNotices }) {
       startDate: notice.startDate || "",
       endDate: notice.endDate || "",
     });
+    setSendResult("");
   };
   const startNew = () => {
     setEditingId(null);
     setDraft(EMPTY_NOTICE);
+    setNotify(true);
+    setSendResult("");
   };
 
-  const save = () => {
+  const save = async () => {
     if (!draft.title.trim()) return;
+    const isNew = !editingId;
+    const noticeId = editingId || uid();
     let next;
     if (editingId) {
       next = notices.map((n) => (n.id === editingId ? { ...n, ...draft } : n));
     } else {
-      next = [{ id: uid(), ...draft }, ...notices];
+      next = [{ id: noticeId, ...draft }, ...notices];
     }
     setNotices(next);
     saveData("notices", next);
+    if (isNew && notify) {
+      setSending(true);
+      setSendResult("");
+      try {
+        const data = await triggerNoticePush(noticeId, draft.title, draft.body);
+        setSendResult(`Sent to ${data.sent ?? "?"} subscribed guests`);
+      } catch (err) {
+        console.error("Notify guests failed:", err);
+        setSendResult(`Couldn't send the notification (${err.message}) — the notice was saved either way.`);
+      } finally {
+        setSending(false);
+      }
+    }
     startNew();
+  };
+  const notifyExisting = async (notice) => {
+    setNotifyingId(notice.id);
+    setNotifyResultId(null);
+    try {
+      const data = await triggerNoticePush(notice.id, notice.title, notice.body);
+      setNotifyResultText(`Sent to ${data.sent ?? "?"} subscribed guests`);
+    } catch (err) {
+      console.error("Notify existing notice failed:", err);
+      setNotifyResultText(`Couldn't send: ${err.message}`);
+    } finally {
+      setNotifyingId(null);
+      setNotifyResultId(notice.id);
+    }
   };
   const remove = (id) => {
     const next = notices.filter((n) => n.id !== id);
@@ -1010,9 +1434,20 @@ function AdminNotices({ notices, setNotices }) {
         <p style={{ fontSize: 11.5, color: C.bark, margin: "-6px 0 12px" }}>
           Leave either date blank to have no start or no end. Once the end date passes, the notice stops showing to guests automatically.
         </p>
-        <button onClick={save} style={{ ...btnPrimary, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          {editingId ? <><Check size={16} /> Save changes</> : <><Plus size={16} /> Add notice</>}
+        {!editingId && (
+          <div style={{ background: C.sandDeep, borderRadius: 10, padding: 10, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+            <span style={{ fontSize: 12.5, fontWeight: 600, color: C.ink, display: "flex", alignItems: "center", gap: 6 }}>
+              <Bell size={13} color={C.green} /> Notify guests
+            </span>
+            <button type="button" onClick={() => setNotify((v) => !v)} style={{ width: 36, height: 20, borderRadius: 10, border: "none", background: notify ? C.green : C.mist, position: "relative", cursor: "pointer", flexShrink: 0 }}>
+              <span style={{ position: "absolute", top: 2, left: notify ? 18 : 2, width: 16, height: 16, borderRadius: "50%", background: C.white, transition: "left 0.15s" }} />
+            </button>
+          </div>
+        )}
+        <button onClick={save} disabled={sending} style={{ ...btnPrimary, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: sending ? 0.6 : 1 }}>
+          {sending ? "Sending…" : editingId ? <><Check size={16} /> Save changes</> : <><Plus size={16} /> Add notice</>}
         </button>
+        {sendResult && <p style={{ fontSize: 11.5, color: C.bark, margin: "8px 0 0" }}>{sendResult}</p>}
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
         <SectionLabel style={{ margin: 0 }}>Current notices ({notices.length})</SectionLabel>
@@ -1032,19 +1467,25 @@ function AdminNotices({ notices, setNotices }) {
           }
         }
         return (
-          <AdminListItem
-            key={n.id}
-            title={n.title}
-            subtitle={`${n.link ? `${n.tag} · linked to blog` : n.tag}${dateNote}`}
-            onEdit={() => startEdit(n)}
-            onDelete={() => remove(n.id)}
-            onMoveUp={() => move(i, -1)}
-            onMoveDown={() => move(i, 1)}
-            disableUp={i === 0}
-            disableDown={i === notices.length - 1}
-            featured={!!n.featured}
-            onToggleFeatured={() => toggleFeatured(n.id)}
-          />
+          <div key={n.id}>
+            <AdminListItem
+              title={n.title}
+              subtitle={`${n.link ? `${n.tag} · linked to blog` : n.tag}${dateNote}`}
+              onEdit={() => startEdit(n)}
+              onDelete={() => remove(n.id)}
+              onMoveUp={() => move(i, -1)}
+              onMoveDown={() => move(i, 1)}
+              disableUp={i === 0}
+              disableDown={i === notices.length - 1}
+              featured={!!n.featured}
+              onToggleFeatured={() => toggleFeatured(n.id)}
+              onNotify={() => notifyExisting(n)}
+              notifying={notifyingId === n.id}
+            />
+            {notifyResultId === n.id && (
+              <p style={{ fontSize: 11, color: C.bark, margin: "-4px 0 8px 4px" }}>{notifyResultText}</p>
+            )}
+          </div>
         );
       })}
     </div>
@@ -1129,19 +1570,44 @@ function AdminForms({ forms, setForms }) {
   );
 }
 
-const EMPTY_INFO = { title: "", body: "", icon: "info" };
+const EMPTY_INFO = { title: "", body: "", icon: "info", pdfLink: "" };
 
 function AdminInfo({ info, setInfo }) {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(EMPTY_INFO);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
 
   const startEdit = (item) => {
     setEditingId(item.id);
-    setDraft({ title: item.title || "", body: item.body || "", icon: item.icon || "info" });
+    setDraft({ title: item.title || "", body: item.body || "", icon: item.icon || "info", pdfLink: item.pdfLink || "" });
+    setUploadError("");
   };
   const startNew = () => {
     setEditingId(null);
     setDraft(EMPTY_INFO);
+    setUploadError("");
+  };
+
+  const handleFileChosen = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      setUploadError("Please choose a PDF file.");
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const url = await uploadPdfToStorage(file);
+      setDraft((d) => ({ ...d, pdfLink: url }));
+    } catch (err) {
+      setUploadError(err.message || "Upload failed — please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const save = () => {
@@ -1179,6 +1645,20 @@ function AdminInfo({ info, setInfo }) {
             {ICON_KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
           </select>
         </label>
+        <AdminInput label="PDF guide link (optional)" value={draft.pdfLink} onChange={(v) => setDraft({ ...draft, pdfLink: v })} placeholder="/guides/wifi-guide.pdf" />
+        <input ref={fileInputRef} type="file" accept="application/pdf" onChange={handleFileChosen} style={{ display: "none" }} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          style={{ background: C.sandDeep, border: "none", borderRadius: 10, padding: "9px 14px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700, color: C.ink, cursor: uploading ? "default" : "pointer", marginTop: "-6px", marginBottom: 12, opacity: uploading ? 0.6 : 1 }}
+        >
+          <Upload size={14} /> {uploading ? "Uploading…" : "Upload a PDF"}
+        </button>
+        {uploadError && <p style={{ fontSize: 11.5, color: "#B3261E", margin: "-6px 0 12px" }}>{uploadError}</p>}
+        {draft.pdfLink && !uploadError && (
+          <p style={{ fontSize: 11.5, color: C.bark, margin: "-6px 0 12px" }}>PDF attached ✓</p>
+        )}
         <button onClick={save} style={{ ...btnPrimary, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           {editingId ? <><Check size={16} /> Save changes</> : <><Plus size={16} /> Add info item</>}
         </button>
@@ -1514,7 +1994,7 @@ function AdminContractorCategories({ categories, setCategories, contractors, set
   );
 }
 
-const EMPTY_CONTRACTOR = { name: "", categoryId: "", phone: "", address: "", notes: "" };
+const EMPTY_CONTRACTOR = { name: "", categoryId: "", phone: "", address: "", notes: "", starred: false };
 
 function AdminContractorEntries({ contractors, setContractors, categories }) {
   const [editingId, setEditingId] = useState(null);
@@ -1524,7 +2004,7 @@ function AdminContractorEntries({ contractors, setContractors, categories }) {
 
   const startEdit = (c) => {
     setEditingId(c.id);
-    setDraft({ name: c.name || "", categoryId: c.categoryId || "", phone: c.phone || "", address: c.address || "", notes: c.notes || "" });
+    setDraft({ name: c.name || "", categoryId: c.categoryId || "", phone: c.phone || "", address: c.address || "", notes: c.notes || "", starred: !!c.starred });
   };
   const startNew = () => {
     setEditingId(null);
@@ -1547,6 +2027,11 @@ function AdminContractorEntries({ contractors, setContractors, categories }) {
     setContractors(next);
     saveData("contractors", next);
     if (editingId === id) startNew();
+  };
+  const toggleStarred = (id) => {
+    const next = contractors.map((c) => (c.id === id ? { ...c, starred: !c.starred } : c));
+    setContractors(next);
+    saveData("contractors", next);
   };
   // Swaps two items by id rather than raw index, so reordering still makes
   // sense when a search/category filter is narrowing what's visible.
@@ -1601,7 +2086,7 @@ function AdminContractorEntries({ contractors, setContractors, categories }) {
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      <p style={{ fontSize: 11.5, color: C.bark, margin: "0 0 8px" }}>{filtered.length} shown</p>
+      <p style={{ fontSize: 11.5, color: C.bark, margin: "0 0 8px" }}>{filtered.length} shown · <Star size={11} color={C.gold} fill={C.gold} style={{ verticalAlign: -1 }} /> = shown on the Emergency contacts screen</p>
       {filterCat !== "all" || query.trim() ? (
         <p style={{ fontSize: 11, color: C.bark, background: C.sandDeep, padding: "8px 10px", borderRadius: 8, marginBottom: 8 }}>Reordering works while searching or filtering too — it moves items relative to their neighbours in this view.</p>
       ) : null}
@@ -1616,6 +2101,9 @@ function AdminContractorEntries({ contractors, setContractors, categories }) {
           onMoveDown={() => move(i, 1, filtered)}
           disableUp={i === 0}
           disableDown={i === filtered.length - 1}
+          featured={!!c.starred}
+          onToggleFeatured={() => toggleStarred(c.id)}
+          featuredTitle="Star for Emergency contacts screen"
         />
       ))}
       <button
@@ -1768,6 +2256,87 @@ function AdminWelshWords({ words, setWords }) {
   );
 }
 
+const EMPTY_EMERGENCY_CONTACT = { section: "park", title: "", sub: "", phone: "", address: "" };
+
+function AdminEmergencyContacts({ contacts, setContacts }) {
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft] = useState(EMPTY_EMERGENCY_CONTACT);
+
+  const editable = contacts.filter((c) => !c.locked);
+  const locked = contacts.filter((c) => c.locked);
+
+  const startEdit = (c) => {
+    setEditingId(c.id);
+    setDraft({ section: c.section || "park", title: c.title || "", sub: c.sub || "", phone: c.phone || "", address: c.address || "" });
+  };
+  const startNew = () => {
+    setEditingId(null);
+    setDraft(EMPTY_EMERGENCY_CONTACT);
+  };
+  const save = () => {
+    if (!draft.title.trim() || !draft.phone.trim()) return;
+    let next;
+    if (editingId) {
+      next = contacts.map((c) => (c.id === editingId ? { ...c, ...draft } : c));
+    } else {
+      next = [...contacts, { id: uid(), locked: false, ...draft }];
+    }
+    setContacts(next);
+    saveData("emergencyContacts", next);
+    startNew();
+  };
+  const remove = (id) => {
+    const next = contacts.filter((c) => c.id !== id);
+    setContacts(next);
+    saveData("emergencyContacts", next);
+    if (editingId === id) startNew();
+  };
+
+  return (
+    <div>
+      <p style={{ fontSize: 11.5, color: C.bark, background: C.sandDeep, padding: "9px 12px", borderRadius: 10, marginBottom: 16, lineHeight: 1.4 }}>
+        999, NHS 111 and North Wales Police (101) are locked to prevent accidental changes to national emergency numbers. Starred contractors are managed from the Contractors tab, not here.
+      </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <SectionLabel style={{ margin: 0 }}>{editingId ? "Edit contact" : "Add a contact"}</SectionLabel>
+        {editingId && <button onClick={startNew} style={{ ...linkBtn, padding: 0 }}>Cancel edit</button>}
+      </div>
+      <div style={{ ...card, marginBottom: 20 }}>
+        <label style={{ display: "block", marginBottom: 12 }}>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.ink }}>Section</span>
+          <select value={draft.section} onChange={(e) => setDraft({ ...draft, section: e.target.value })}
+            style={{ marginTop: 5, width: "100%", padding: "10px 11px", borderRadius: 10, border: `1.5px solid ${C.mist}`, fontSize: 14 }}>
+            {EMERGENCY_SECTION_ORDER.map((s) => <option key={s} value={s}>{EMERGENCY_SECTION_LABELS[s]}</option>)}
+          </select>
+        </label>
+        <AdminInput label="Title" value={draft.title} onChange={(v) => setDraft({ ...draft, title: v })} placeholder="e.g. Glan Clwyd Hospital A&E" />
+        <AdminInput label="Subtitle" value={draft.sub} onChange={(v) => setDraft({ ...draft, sub: v })} placeholder="e.g. Rhuddlan Road, Rhyl LL18 5UJ" />
+        <AdminInput label="Phone number" value={draft.phone} onChange={(v) => setDraft({ ...draft, phone: v })} placeholder="01745 560279" />
+        <AdminInput label="Address (optional — adds a Directions button)" value={draft.address} onChange={(v) => setDraft({ ...draft, address: v })} placeholder="e.g. Rhuddlan Road, Rhyl LL18 5UJ" />
+        <button onClick={save} style={{ ...btnPrimary, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {editingId ? <><Check size={16} /> Save changes</> : <><Plus size={16} /> Add contact</>}
+        </button>
+      </div>
+
+      <SectionLabel>Editable ({editable.length})</SectionLabel>
+      {editable.map((c) => (
+        <AdminListItem key={c.id} title={c.title} subtitle={`${EMERGENCY_SECTION_LABELS[c.section]} · ${c.phone}`} onEdit={() => startEdit(c)} onDelete={() => remove(c.id)} />
+      ))}
+
+      <SectionLabel style={{ marginTop: 20 }}>Locked — national numbers</SectionLabel>
+      {locked.map((c) => (
+        <div key={c.id} style={{ ...card, marginBottom: 8, display: "flex", alignItems: "center", gap: 12, background: C.sandDeep, border: "none" }}>
+          <Lock size={16} color={C.bark} style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.ink }}>{c.title}</p>
+            <p style={{ margin: "2px 0 0", fontSize: 12, color: C.bark }}>{EMERGENCY_SECTION_LABELS[c.section]} · {c.sub}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function StatCard({ icon: Icon, label, value }) {
   return (
     <div style={{ ...card, flex: 1 }}>
@@ -1808,16 +2377,40 @@ function RankList({ title, rows, emptyText }) {
 
 function AdminStats() {
   const [events, setEvents] = useState(null); // null = loading
+  const [stats, setStats] = useState(null); // null = loading
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    loadData("events", []).then((data) => { if (!cancelled) setEvents(data); });
+    loadEvents().then((data) => { if (!cancelled) setEvents(data); });
+    loadAdminStats().then((data) => { if (!cancelled) setStats(data); });
     return () => { cancelled = true; };
   }, [refreshKey]);
 
-  if (events === null) {
+  if (events === null || stats === null) {
     return <p style={{ fontSize: 13, color: C.bark }}>Loading usage stats…</p>;
+  }
+
+  const notifOptInPct = stats.active_devices_7d
+    ? Math.round((stats.notif_devices_7d / stats.active_devices_7d) * 100)
+    : 0;
+
+  // Turn the heatmap RPC rows ({dow, hour, count}) into a 7x24 grid.
+  // dow follows Postgres's extract(dow): 0 = Sunday .. 6 = Saturday.
+  const HEATMAP_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const heatGrid = HEATMAP_DAYS.map((_, d) =>
+    [...Array(24)].map((_, h) => {
+      const row = stats.heatmap.find((r) => Number(r.dow) === d && Number(r.hour) === h);
+      return row ? row.count : 0;
+    })
+  );
+  const maxHeat = Math.max(1, ...heatGrid.flat());
+  function heatColor(v) {
+    const t = v / maxHeat;
+    const from = [237, 228, 206]; // C.sandDeep
+    const to = [11, 92, 56]; // C.green
+    const rgb = from.map((c, i) => Math.round(c + (to[i] - c) * t));
+    return `rgb(${rgb.join(",")})`;
   }
 
   const opens = events.filter((e) => e.type === "app_open");
@@ -1838,8 +2431,8 @@ function AdminStats() {
   });
   const maxDay = Math.max(1, ...dayBuckets.map((d) => d.count));
 
-  const calls = rankEvents(events, ["directory_call", "contractor_call"]);
-  const navs = rankEvents(events, ["directory_navigate", "contractor_navigate"]);
+  const calls = rankEvents(events, ["directory_call", "contractor_call", "emergency_call"]);
+  const navs = rankEvents(events, ["directory_navigate", "contractor_navigate", "emergency_navigate"]);
   const websites = rankEvents(events, ["directory_website", "contractor_website"]);
   const forms = rankEvents(events, ["form_launch"]);
 
@@ -1850,9 +2443,18 @@ function AdminStats() {
         <button onClick={() => setRefreshKey((k) => k + 1)} style={{ ...linkBtn, padding: 0 }}>Refresh</button>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
         <StatCard icon={TrendingUp} label="Opens (last 7 days)" value={opensLast7} />
         <StatCard icon={Smartphone} label="Opened from home screen" value={`${standalonePct}%`} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <StatCard icon={Users} label="Active users (7 days)" value={stats.active_devices_7d} />
+        <StatCard icon={Bell} label="Notification subscribers" value={stats.push_subscribers} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <StatCard icon={Bell} label="Of active devices, notifications on" value={`${notifOptInPct}%`} />
       </div>
 
       <SectionLabel>Opens per day</SectionLabel>
@@ -1865,13 +2467,48 @@ function AdminStats() {
         ))}
       </div>
 
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <Clock size={13} color={C.green} />
+        <SectionLabel style={{ margin: 0 }}>Busiest times (last 30 days)</SectionLabel>
+      </div>
+      <div style={{ ...card, overflowX: "auto", marginBottom: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 480 }}>
+          <div style={{ display: "flex", gap: 3, paddingLeft: 32 }}>
+            {[0, 6, 12, 18].map((h) => (
+              <div key={h} style={{ flex: 6, fontSize: 9, color: C.bark }}>
+                {h === 0 ? "12am" : h === 12 ? "12pm" : h < 12 ? `${h}am` : `${h - 12}pm`}
+              </div>
+            ))}
+          </div>
+          {heatGrid.map((row, d) => (
+            <div key={d} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <div style={{ width: 28, fontSize: 10, color: C.bark, fontWeight: 700 }}>{HEATMAP_DAYS[d]}</div>
+              <div style={{ display: "flex", gap: 2, flex: 1 }}>
+                {row.map((v, h) => (
+                  <div key={h} title={`${HEATMAP_DAYS[d]} ${h}:00 — ${v} opens`} style={{ flex: 1, height: 16, borderRadius: 3, background: heatColor(v) }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+        <span style={{ fontSize: 10, color: C.bark }}>Quiet</span>
+        <div style={{ display: "flex", gap: 2 }}>
+          {[0.15, 0.4, 0.65, 0.9, 1].map((t) => (
+            <div key={t} style={{ width: 14, height: 10, borderRadius: 2, background: heatColor(t * maxHeat) }} />
+          ))}
+        </div>
+        <span style={{ fontSize: 10, color: C.bark }}>Busy</span>
+      </div>
+
       <RankList title="Most called — businesses" rows={calls} emptyText="No calls logged yet." />
       <RankList title="Most navigated-to — businesses" rows={navs} emptyText="No directions taps logged yet." />
       <RankList title="Most visited websites — businesses" rows={websites} emptyText="No website taps logged yet." />
       <RankList title="Form launches" rows={forms} emptyText="No forms opened yet." />
 
       <p style={{ fontSize: 11, color: C.bark, background: C.sandDeep, padding: "10px 12px", borderRadius: 10, lineHeight: 1.5 }}>
-        Counts come from every guest's device and update as people use the Hub. Notices aren't tracked individually since they all sit on one page — app opens capture that traffic instead.
+        Counts come from every guest's device and update as people use the Hub. "Active users" and notification stats are per-device, going forward from when this update ships — older events won't have a device attached. Notices aren't tracked individually since they all sit on one page — app opens capture that traffic instead.
       </p>
     </div>
   );
@@ -1897,12 +2534,7 @@ function AdminSettings({ settings, setSettings }) {
         <AdminInput label="First button label (links to Forms)" value={settings.quickAction1Label} onChange={(v) => update({ quickAction1Label: v })} />
         <AdminInput label="Second button label (links to Notices)" value={settings.quickAction2Label} onChange={(v) => update({ quickAction2Label: v })} />
       </div>
-      <SectionLabel>Office & emergency</SectionLabel>
-      <div style={card}>
-        <AdminInput label="Office hours line" value={settings.officeHours} onChange={(v) => update({ officeHours: v })} />
-        <AdminInput label="Emergency line" value={settings.emergencyLine} onChange={(v) => update({ emergencyLine: v })} />
-      </div>
-      <SectionLabel style={{ marginTop: 20 }}>About Tree Tops (shown on More)</SectionLabel>
+      <SectionLabel>About Tree Tops (shown on More)</SectionLabel>
       <div style={card}>
         <AdminInput label="About text" value={settings.aboutText} onChange={(v) => update({ aboutText: v })} textarea />
         <AdminInput label="Link (optional — e.g. to a blog post)" value={settings.aboutLink} onChange={(v) => update({ aboutLink: v })} placeholder="https://www.treetops.co.uk/blog/..." />
@@ -1941,9 +2573,31 @@ export default function TreeTopsHubApp() {
   const [welshWords, setWelshWords] = useState(SEED_WELSH_WORDS);
   const [contractors, setContractors] = useState(SEED_CONTRACTORS);
   const [contractorCategories, setContractorCategories] = useState(SEED_CONTRACTOR_CATEGORIES);
+  const [emergencyContacts, setEmergencyContacts] = useState(SEED_EMERGENCY_CONTACTS);
 
   const [adminMode, setAdminMode] = useState(false); // false | "gate" | "portal"
   const [adminTab, setAdminTab] = useState("stats");
+  const [isStandalone, setIsStandalone] = useState(false);
+  const [isOffline, setIsOffline] = useState(typeof navigator !== "undefined" && !navigator.onLine);
+
+  useEffect(() => {
+    const goOnline = () => setIsOffline(false);
+    const goOffline = () => setIsOffline(true);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(display-mode: standalone)");
+    const check = () => setIsStandalone(mq.matches || window.navigator.standalone === true);
+    check();
+    mq.addEventListener("change", check);
+    return () => mq.removeEventListener("change", check);
+  }, []);
 
   useEffect(() => {
     const standalone =
@@ -1954,7 +2608,7 @@ export default function TreeTopsHubApp() {
 
   useEffect(() => {
     (async () => {
-      const [n, f, i, s, d, dc, ww, ct, ctc] = await Promise.all([
+      const [n, f, i, s, d, dc, ww, ct, ctc, ec] = await Promise.all([
         loadData("notices", SEED_NOTICES),
         loadData("forms", SEED_FORMS),
         loadData("info", SEED_INFO),
@@ -1964,8 +2618,9 @@ export default function TreeTopsHubApp() {
         loadData("welshWords", SEED_WELSH_WORDS),
         loadData("contractors", SEED_CONTRACTORS),
         loadData("contractorCategories", SEED_CONTRACTOR_CATEGORIES),
+        loadData("emergencyContacts", SEED_EMERGENCY_CONTACTS),
       ]);
-      setNotices(n); setForms(f); setInfo(i); setSettings({ ...SEED_SETTINGS, ...s }); setDirectory(d); setDirectoryCategories(dc); setWelshWords(ww); setContractors(ct); setContractorCategories(ctc);
+      setNotices(n); setForms(f); setInfo(i); setSettings({ ...SEED_SETTINGS, ...s }); setDirectory(d); setDirectoryCategories(dc); setWelshWords(ww); setContractors(ct); setContractorCategories(ctc); setEmergencyContacts(ec);
       setLoading(false);
     })();
   }, []);
@@ -1975,11 +2630,22 @@ export default function TreeTopsHubApp() {
     if (formId) setActiveFormId(formId);
   };
 
-  const frame = (inner) => (
-    <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, minHeight: 700, position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}` }}>
-      <div style={{ height: 700, overflowY: "auto" }}>{inner}</div>
+  const offlineBanner = isOffline ? (
+    <div style={{ background: "#3A2E1D", color: "#F5E9C8", fontSize: 11.5, fontWeight: 600, textAlign: "center", padding: "6px 10px" }}>
+      You're offline — showing the last saved info
     </div>
-  );
+  ) : null;
+
+  const frame = (inner) =>
+    isStandalone ? (
+      <div style={{ width: "100%", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
+        <div style={{ height: "100%", overflowY: "auto" }}>{offlineBanner}{inner}</div>
+      </div>
+    ) : (
+      <div style={{ maxWidth: 390, margin: "0 auto", background: C.sand, fontFamily: bodyFont, height: "100dvh", position: "relative", borderRadius: 28, overflow: "hidden", boxShadow: "0 20px 60px rgba(27,58,52,0.25)", border: `8px solid ${C.ink}`, boxSizing: "border-box", paddingTop: "env(safe-area-inset-top)" }}>
+        <div style={{ height: "100%", overflowY: "auto" }}>{offlineBanner}{inner}</div>
+      </div>
+    );
 
   if (loading) {
     return frame(<div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: C.bark, fontSize: 13 }}>Loading Tree Tops Hub…</div>);
@@ -1998,6 +2664,7 @@ export default function TreeTopsHubApp() {
     else if (adminTab === "info") panel = <AdminInfo info={info} setInfo={setInfo} />;
     else if (adminTab === "welsh") panel = <AdminWelshWords words={welshWords} setWords={setWelshWords} />;
     else if (adminTab === "contractors") panel = <AdminContractors contractors={contractors} setContractors={setContractors} categories={contractorCategories} setCategories={setContractorCategories} />;
+    else if (adminTab === "emergency") panel = <AdminEmergencyContacts contacts={emergencyContacts} setContacts={setEmergencyContacts} />;
     else panel = <AdminSettings settings={settings} setSettings={setSettings} />;
     return frame(<AdminShell tab={adminTab} setTab={setAdminTab} onExit={() => setAdminMode(false)}>{panel}</AdminShell>);
   }
@@ -2010,6 +2677,7 @@ export default function TreeTopsHubApp() {
     content = form ? <FormLinkScreen form={form} onBack={() => setActiveFormId(null)} /> : <FormsListScreen go={go} forms={forms} />;
   } else if (tab === "directory") content = <DirectoryScreen directory={directory} categories={directoryCategories} />;
   else if (tab === "contractors") content = <ContractorsScreen contractors={contractors} categories={contractorCategories} />;
+  else if (tab === "emergency") content = <EmergencyContactsScreen contacts={emergencyContacts} contractors={contractors} contractorCategories={contractorCategories} onBack={() => go("home")} />;
   else content = <MoreScreen onAdminTap={() => setAdminMode("gate")} info={info} settings={settings} />;
 
   return frame(
