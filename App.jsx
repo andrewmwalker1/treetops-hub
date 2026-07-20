@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.7";
+const APP_VERSION = "1.9.8";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -719,6 +719,13 @@ function NoticeCarousel({ notices, speedSeconds }) {
     return () => clearInterval(timer);
   }, [count, speedSeconds, index]);
 
+  const [renderedInfo, setRenderedInfo] = useState("");
+  useLayoutEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    setRenderedInfo(`cssH=${getComputedStyle(el).height} rectH=${el.getBoundingClientRect().height.toFixed(1)}`);
+  }, [maxHeight, index]);
+
   if (count <= 1) return <NoticeCard notice={notices[0]} />;
 
   const goTo = (i) => setIndex(((i % count) + count) % count);
@@ -762,7 +769,7 @@ function NoticeCarousel({ notices, speedSeconds }) {
       </div>
       {/* TEMPORARY diagnostic readout — remove once the resize bug is confirmed fixed. */}
       <div style={{ fontSize: 9, fontFamily: "monospace", color: "#fff", background: "rgba(11,92,56,0.9)", padding: "3px 6px", borderRadius: 4, marginTop: 4, wordBreak: "break-all" }}>
-        maxH={maxHeight} idx={index} n={notices.length} | {debugInfo}
+        maxH={maxHeight} idx={index} n={notices.length} | {debugInfo} | {renderedInfo}
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (
