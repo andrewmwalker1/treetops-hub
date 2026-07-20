@@ -1,1 +1,57 @@
-if(!self.define){let e,n={};const i=(i,r)=>(i=new URL(i+".js",r).href,n[i]||new Promise(n=>{if("document"in self){const e=document.createElement("script");e.src=i,e.onload=n,document.head.appendChild(e)}else e=i,importScripts(i),n()}).then(()=>{let e=n[i];if(!e)throw new Error(`Module ${i} didn’t register its module`);return e}));self.define=(r,l)=>{const o=e||("document"in self?document.currentScript.src:"")||location.href;if(n[o])return;let s={};const u=e=>i(e,o),c={module:{uri:o},exports:s,require:u};n[o]=Promise.all(r.map(e=>c[e]||u(e))).then(e=>(l(...e),s))}}define(["./workbox-9c191d2f"],function(e){"use strict";self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"registerSW.js",revision:null},{url:"index.html",revision:null},{url:"index-DMmMseux.css",revision:null},{url:"index-C3EOuUgX.js",revision:null},{url:"icon-512.png",revision:null},{url:"icon-512-maskable.png",revision:null},{url:"icon-192.png",revision:null},{url:"favicon-32.png",revision:null},{url:"apple-touch-icon.png",revision:null},{url:"apple-touch-icon.png",revision:"6f32e15748ab1eb6ddb363d14a64c7f9"},{url:"favicon-32.png",revision:"92dcc88d80e0a1ac48685b17a295e8b6"},{url:"icon-192.png",revision:"d4f21dec89a016e585b473d9f8aa8a60"},{url:"icon-512-maskable.png",revision:"5801c83a9bfa38919d05ac9c2c60b776"},{url:"icon-512.png",revision:"18149a4c86620e902972bab3a52ad4b7"},{url:"manifest.webmanifest",revision:"d0611ee2dd4a0c32e3aacbdabcb36684"}],{}),e.cleanupOutdatedCaches(),e.registerRoute(new e.NavigationRoute(e.createHandlerBoundToURL("index.html")))});
+import { precacheAndRoute, cleanupOutdatedCaches } from "workbox-precaching";
+import { clientsClaim } from "workbox-core";
+import { registerRoute } from "workbox-routing";
+import { StaleWhileRevalidate } from "workbox-strategies";
+
+self.skipWaiting();
+clientsClaim();
+cleanupOutdatedCaches();
+
+// vite-plugin-pwa injects the list of built files to precache here at build time.
+precacheAndRoute(self.__WB_MANIFEST);
+
+// Offline support: cache every piece of app content (notices, emergency
+// contacts, directory, forms, etc — all fetched from the same Supabase
+// `app_data` table) as it's loaded. Serves the last-known copy instantly,
+// then quietly refreshes in the background if there's a connection —
+// so it's fast when online and still works when there isn't a signal.
+// Since the app loads everything upfront on open (not lazily per-screen),
+// the very first successful launch primes the cache for the whole app.
+registerRoute(
+  ({ url }) => url.pathname === "/rest/v1/app_data",
+  new StaleWhileRevalidate({ cacheName: "app-data-cache" })
+);
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: "Tree Tops Hub", body: event.data ? event.data.text() : "" };
+  }
+  const title = data.title || "Tree Tops Hub";
+  const options = {
+    body: data.body || "",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: data.tag || data.noticeId || undefined,
+    data: { url: data.url || (data.noticeId ? `/?notice=${data.noticeId}` : "/") },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+      for (const client of list) {
+        if (client.url.includes(targetUrl.split("?")[0]) && "focus" in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetUrl);
+    })
+  );
+});
