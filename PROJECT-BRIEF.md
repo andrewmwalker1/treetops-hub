@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.4)
+**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.12)
 
 ## Who you're talking to
 
@@ -106,7 +106,7 @@ it — don't rebuild the theme from scratch.
 - **Notices** — optional start/end dates per notice; only currently-live
   notices show to guests (blank dates = always show). Admin list shows
   Live/Scheduled status.
-- **v1.9.0–1.9.4:** Home's featured-notice slot is now a swipeable
+- **v1.9.0–1.9.12:** Home's featured-notice slot is now a swipeable
   carousel. Admin can star more than one notice (`AdminNotices` no
   longer clears other stars when one is toggled); `getFeaturedNotices()`
   shows every starred active notice, in list order, falling back to
@@ -117,35 +117,105 @@ it — don't rebuild the theme from scratch.
   transition speed (`settings.noticeCarouselSpeed`, seconds, 0 = off),
   stored in the existing `settings` key in `app_data` — no schema
   change needed.
-  **The box-resizing saga (v1.9.2–1.9.4):** the box is meant to stay
-  fixed at the height of the tallest featured notice as guests
-  swipe/auto-advance. v1.9.2 (CSS grid stacking) and v1.9.3
-  (`ResizeObserver` on the same elements being toggled hidden/visible
-  for display) both looked correct in this session's own Chromium
-  testing but Andy still saw real, visible resizing on his phone —
-  confirmed for certain via a screen recording, pixel-measured frame by
-  frame (`ffmpeg` + `PIL`/numpy), which showed the box genuinely
-  jumping between two heights in sync with notice changes. **Root
-  cause:** v1.9.3 measured each slide's height using the *same element*
-  that also got toggled `visibility: hidden`/`visible` to show/hide it
-  — some mobile browsers don't reliably keep layout metrics fresh for
-  an element that keeps flipping in and out of visibility, so the
-  measurement would occasionally read a stale/smaller value and shrink
-  the box. **v1.9.4 fix:** decoupled measurement from display — a
-  separate, *permanently* hidden set of "prober" copies of every slide
-  (never toggled, so no stale-metrics risk) is measured via
-  `ResizeObserver`, while the actually-displayed slide is a plain,
-  always-normal-flow `NoticeCard` pinned to that measured height.
-  `Math.max(prev, ...)` also guards against the box ever shrinking once
-  a taller measurement has been seen. See `NoticeCarousel` in
-  `App.jsx`. **Lesson for next time a "looks fine in testing, still
-  broken on the real device" bug shows up:** ask for a short screen
-  recording early and measure it (frame extraction + pixel sampling)
-  rather than trusting screenshots or eyeballing — two static
-  screenshots of this exact bug looked identical by eye and even
-  pixel-diffed as identical in one comparison, because they happened to
-  be two notices of coincidentally similar length; only the video,
-  measured frame-by-frame, proved the resize was real.
+
+  **⚠ UNRESOLVED — the box-resizing bug (v1.9.2–1.9.12).** The box is
+  meant to stay a fixed height (the tallest featured notice) as guests
+  swipe/auto-advance between slides. It doesn't, on Andy's phone —
+  confirmed for certain via several screen recordings, pixel-measured
+  frame by frame (`ffmpeg` + `PIL`/numpy: `crop`/`fps` to extract
+  frames, then scan a column of pixels for the card's white background
+  to find its top/bottom edge). Left as-is for now, at Andy's request,
+  after ~10 attempted fixes across one session. **Do not assume this is
+  fixed without a fresh screen recording from Andy** — it has looked
+  fixed in this session's own Chromium testing on *every single
+  attempt*, and has never once reproduced here.
+
+  Andy's setup: **iPhone 14 Pro Max, iOS 26.5.2**, the Hub added to his
+  **Home Screen** (standalone display mode, no Safari address bar) —
+  not a plain Safari tab. Confirm this hasn't changed before resuming.
+
+  What's been ruled out, in order tried (each looked correct in this
+  session's Chromium testing, each still failed on Andy's phone):
+  1. **v1.9.2** — CSS grid stacking (`gridArea:"1/1"` + `visibility:hidden`
+     siblings). Grid track sizing should size to the tallest sibling
+     regardless of visibility; didn't hold on-device.
+  2. **v1.9.3** — `ResizeObserver` measuring the *same* element that also
+     got toggled `visibility:hidden`/`visible` for display.
+  3. **v1.9.4** — decoupled measurement from display: permanently-hidden
+     "prober" copies (never toggled) measured via `ResizeObserver`,
+     applied as a fixed `height` to a separate always-visible display
+     element.
+  4. **v1.9.5** — added an on-screen diagnostic badge
+     (`maxH=… idx=… h=[…] w=[…]`) to see React's actual state live.
+     **This is where it got interesting:** the badge proved the
+     *measurement* was correct and stable (e.g. `h=[141,141,122,141]`,
+     correctly distinguishing a shorter 2-line notice from three 3-line
+     ones) and `maxH` correctly stayed pinned at the true max
+     throughout — yet the box still visibly resized in sync with the
+     notice changing.
+  5. **v1.9.6** — swapped `visibility:hidden` probes for genuinely
+     off-canvas (`left:-9999px`) ones, in case hidden elements weren't
+     getting a full layout pass. Identical `maxH` value both before and
+     after this change — ruled out visibility-hidden layout timing as
+     the cause entirely.
+  6. **v1.9.7–1.9.8** — expanded the badge to show `getComputedStyle` and
+     `getBoundingClientRect` read *directly off the live DOM*, not just
+     React's copy. **The critical finding:** both consistently reported
+     the box at its correct fixed height on *every* slide — but
+     independent pixel-measurement of the same screen recording showed
+     the box genuinely painted at two different real heights depending
+     on which slide was showing (e.g. 411px vs 355px, device pixels).
+     **The DOM's own layout is correct; the browser just isn't
+     repainting to match it.** A real paint/compositing desync, not a
+     sizing or measurement bug.
+  7. **v1.9.9** — tried forcing React to mount a fresh DOM node per slide
+     (`key={notice.id}`) instead of updating one node in place, in case
+     of stale paint from an in-place content swap. No change.
+  8. **v1.9.10** — researched this properly (see Sources below) and
+     applied the standard, documented WebKit fix for `overflow:hidden`
+     not reliably re-clipping on content change: forcing the clipping
+     element onto its own GPU compositing layer
+     (`transform:translateZ(0)` + `will-change:transform`). No change.
+  9. **v1.9.11** — tried an *active* forced-repaint nudge (briefly
+     perturbing `opacity` on each slide change) rather than a passive
+     compositing hint, on the theory that standalone iOS home-screen
+     web apps (WKWebView) can skip repainting content changed by JS
+     alone. Confirmed still broken on-device.
+  10. **v1.9.12** — gave up trying to out-maneuver whatever this is and
+      removed the shared ingredient of every attempt above: there is no
+      more JS-computed height anywhere. All slides are now always
+      mounted, stacked in one CSS grid cell; only `opacity` changes per
+      slide. The box's height is pure native grid track-sizing, never
+      touched by React state. **This has not been confirmed on Andy's
+      phone** — PR merged right as he called it a day for the session,
+      before he tested it. **This is the first thing to check when
+      picking this back up.**
+
+  Leading theory if v1.9.12 also turns out not to hold: a documented,
+  if unconfirmed by the React team, class of **React 18 + Safari bugs**
+  where a state-driven update is applied correctly internally but
+  doesn't reliably reach the screen in some concurrent-mode edge cases
+  (see e.g. facebook/react#22459, #26713 — both closed as stale/
+  unconfirmed, both Safari-only, both "state is right, DOM isn't").
+  v1.9.12 sidesteps that class of bug by removing state-driven styling
+  from the equation rather than working around it, which is a
+  meaningfully different bet than v1.9.2 through v1.9.11 — worth
+  knowing if it also fails, since it'd suggest the cause is elsewhere
+  again (maybe genuinely CSS/compositing after all, or something about
+  this specific standalone-PWA/WKWebView context we haven't found yet).
+
+  **Lesson for next time a "looks fine in testing, still broken on the
+  real device" bug shows up:** ask for a short screen recording early
+  and measure it (`ffmpeg` frame extraction + pixel sampling) rather
+  than trusting screenshots or eyeballing — two static screenshots of
+  this exact bug looked identical by eye and even pixel-diffed as
+  identical in one comparison, because they happened to be two notices
+  of coincidentally similar length; only video, measured frame-by-frame,
+  proved the resize was real. An on-screen diagnostic badge showing
+  live state (then removed once done) was also far more productive
+  than guessing blind — it's what turned "measurement must be wrong"
+  into "measurement is right, the paint is wrong," which redirected the
+  whole investigation.
 - **Explore & Contractors** — each entry can have phone (Call button),
   address (Directions button via Google Maps), and website (Website
   button — left blank for Facebook-only businesses).
