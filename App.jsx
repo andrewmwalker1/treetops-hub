@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.10";
+const APP_VERSION = "1.9.11";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -725,6 +725,23 @@ function NoticeCarousel({ notices, speedSeconds }) {
     if (!el) return;
     setRenderedInfo(`cssH=${getComputedStyle(el).height} rectH=${el.getBoundingClientRect().height.toFixed(1)}`);
   }, [maxHeight, index]);
+
+  // Forced-repaint nudge: on at least one real device, the wrapper's own
+  // layout (getComputedStyle/getBoundingClientRect) is provably correct on
+  // every slide, but the painted pixels still lag behind for some slides -
+  // a stale-paint bug specifically reported for standalone "Add to Home
+  // Screen" web apps on iOS, where WKWebView can skip repainting content
+  // changed by JS alone. Nudging opacity is a well-documented forced-repaint
+  // workaround for that class of bug.
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    el.style.opacity = "0.999";
+    const raf = requestAnimationFrame(() => {
+      el.style.opacity = "1";
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [index, maxHeight]);
 
   if (count <= 1) return <NoticeCard notice={notices[0]} />;
 
