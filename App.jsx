@@ -5,7 +5,7 @@ import {
   Settings, LogOut, FileText, Calendar, ShieldCheck, ChevronUp, ChevronDown, Star,
   Compass, Search, Globe, PawPrint, X, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle,
   CloudRain, CloudSnow, CloudLightning, Languages, Navigation, Wrench,
-  Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload,
+  Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload, Users,
 } from "lucide-react";
 
 // ---- Brand tokens ----
@@ -30,8 +30,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.7.0";
-const BUILD_DATE = "19 Jul 2026";
+const APP_VERSION = "1.8.0";
+const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -279,6 +279,7 @@ async function savePushSubscription(sub) {
       p_endpoint: sub.endpoint,
       p_subscription: sub.toJSON(),
       p_user_agent: navigator.userAgent,
+      p_device_id: getDeviceId(),
     }),
   });
   if (!res.ok) {
@@ -335,6 +336,27 @@ function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
+// Anonymous, per-device identifier — created once on first launch and
+// persisted in localStorage. Not tied to any personal info; exists purely
+// so Admin → Stats can count distinct devices (active users, notification
+// opt-in rate) instead of raw event counts. Safe to lose (e.g. guest clears
+// site data) — worst case they're just counted as a "new" device next time.
+const DEVICE_ID_KEY = "hub_device_id";
+function getDeviceId() {
+  try {
+    let id = localStorage.getItem(DEVICE_ID_KEY);
+    if (!id) {
+      id = (typeof crypto !== "undefined" && crypto.randomUUID) ? crypto.randomUUID() : uid() + uid();
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    // localStorage unavailable (e.g. private mode edge cases) — fall back to
+    // a session-only id rather than breaking event logging entirely.
+    return "no-storage-" + uid();
+  }
+}
+
 // Fire-and-forget usage logging: inserts one row into the dedicated
 // usage_events table (see 03-usage-events-table.sql). Each event is its
 // own row, so concurrent taps from different guests just become
@@ -350,7 +372,7 @@ async function logEvent(type, label) {
         "Content-Type": "application/json",
         Prefer: "return=minimal",
       },
-      body: JSON.stringify([{ type, label, ts: Date.now() }]),
+      body: JSON.stringify([{ type, label, ts: Date.now(), device_id: getDeviceId() }]),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
@@ -381,6 +403,35 @@ async function loadEvents() {
     return await res.json();
   } catch {
     return [];
+  }
+}
+
+// Reads aggregate stats (active devices, notification subscribers/opt-in
+// rate, busiest-times heatmap) via a security-definer RPC. Computed
+// server-side over the *full* usage_events/push_subscriptions tables, so
+// unlike loadEvents() these numbers aren't affected by MAX_LOADED_EVENTS.
+async function loadAdminStats() {
+  const fallback = {
+    push_subscribers: 0,
+    active_devices_7d: 0,
+    notif_devices_7d: 0,
+    heatmap: [],
+  };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_admin_stats`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+    if (!res.ok) return fallback;
+    const data = await res.json();
+    return { ...fallback, ...data };
+  } catch {
+    return fallback;
   }
 }
 
@@ -2326,16 +2377,40 @@ function RankList({ title, rows, emptyText }) {
 
 function AdminStats() {
   const [events, setEvents] = useState(null); // null = loading
+  const [stats, setStats] = useState(null); // null = loading
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     loadEvents().then((data) => { if (!cancelled) setEvents(data); });
+    loadAdminStats().then((data) => { if (!cancelled) setStats(data); });
     return () => { cancelled = true; };
   }, [refreshKey]);
 
-  if (events === null) {
+  if (events === null || stats === null) {
     return <p style={{ fontSize: 13, color: C.bark }}>Loading usage stats…</p>;
+  }
+
+  const notifOptInPct = stats.active_devices_7d
+    ? Math.round((stats.notif_devices_7d / stats.active_devices_7d) * 100)
+    : 0;
+
+  // Turn the heatmap RPC rows ({dow, hour, count}) into a 7x24 grid.
+  // dow follows Postgres's extract(dow): 0 = Sunday .. 6 = Saturday.
+  const HEATMAP_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const heatGrid = HEATMAP_DAYS.map((_, d) =>
+    [...Array(24)].map((_, h) => {
+      const row = stats.heatmap.find((r) => Number(r.dow) === d && Number(r.hour) === h);
+      return row ? row.count : 0;
+    })
+  );
+  const maxHeat = Math.max(1, ...heatGrid.flat());
+  function heatColor(v) {
+    const t = v / maxHeat;
+    const from = [237, 228, 206]; // C.sandDeep
+    const to = [11, 92, 56]; // C.green
+    const rgb = from.map((c, i) => Math.round(c + (to[i] - c) * t));
+    return `rgb(${rgb.join(",")})`;
   }
 
   const opens = events.filter((e) => e.type === "app_open");
@@ -2368,9 +2443,18 @@ function AdminStats() {
         <button onClick={() => setRefreshKey((k) => k + 1)} style={{ ...linkBtn, padding: 0 }}>Refresh</button>
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
         <StatCard icon={TrendingUp} label="Opens (last 7 days)" value={opensLast7} />
         <StatCard icon={Smartphone} label="Opened from home screen" value={`${standalonePct}%`} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <StatCard icon={Users} label="Active users (7 days)" value={stats.active_devices_7d} />
+        <StatCard icon={Bell} label="Notification subscribers" value={stats.push_subscribers} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <StatCard icon={Bell} label="Of active devices, notifications on" value={`${notifOptInPct}%`} />
       </div>
 
       <SectionLabel>Opens per day</SectionLabel>
@@ -2383,13 +2467,48 @@ function AdminStats() {
         ))}
       </div>
 
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <Clock size={13} color={C.green} />
+        <SectionLabel style={{ margin: 0 }}>Busiest times (last 30 days)</SectionLabel>
+      </div>
+      <div style={{ ...card, overflowX: "auto", marginBottom: 6 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 480 }}>
+          <div style={{ display: "flex", gap: 3, paddingLeft: 32 }}>
+            {[0, 6, 12, 18].map((h) => (
+              <div key={h} style={{ flex: 6, fontSize: 9, color: C.bark }}>
+                {h === 0 ? "12am" : h === 12 ? "12pm" : h < 12 ? `${h}am` : `${h - 12}pm`}
+              </div>
+            ))}
+          </div>
+          {heatGrid.map((row, d) => (
+            <div key={d} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <div style={{ width: 28, fontSize: 10, color: C.bark, fontWeight: 700 }}>{HEATMAP_DAYS[d]}</div>
+              <div style={{ display: "flex", gap: 2, flex: 1 }}>
+                {row.map((v, h) => (
+                  <div key={h} title={`${HEATMAP_DAYS[d]} ${h}:00 — ${v} opens`} style={{ flex: 1, height: 16, borderRadius: 3, background: heatColor(v) }} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 18 }}>
+        <span style={{ fontSize: 10, color: C.bark }}>Quiet</span>
+        <div style={{ display: "flex", gap: 2 }}>
+          {[0.15, 0.4, 0.65, 0.9, 1].map((t) => (
+            <div key={t} style={{ width: 14, height: 10, borderRadius: 2, background: heatColor(t * maxHeat) }} />
+          ))}
+        </div>
+        <span style={{ fontSize: 10, color: C.bark }}>Busy</span>
+      </div>
+
       <RankList title="Most called — businesses" rows={calls} emptyText="No calls logged yet." />
       <RankList title="Most navigated-to — businesses" rows={navs} emptyText="No directions taps logged yet." />
       <RankList title="Most visited websites — businesses" rows={websites} emptyText="No website taps logged yet." />
       <RankList title="Form launches" rows={forms} emptyText="No forms opened yet." />
 
       <p style={{ fontSize: 11, color: C.bark, background: C.sandDeep, padding: "10px 12px", borderRadius: 10, lineHeight: 1.5 }}>
-        Counts come from every guest's device and update as people use the Hub. Notices aren't tracked individually since they all sit on one page — app opens capture that traffic instead.
+        Counts come from every guest's device and update as people use the Hub. "Active users" and notification stats are per-device, going forward from when this update ships — older events won't have a device attached. Notices aren't tracked individually since they all sit on one page — app opens capture that traffic instead.
       </p>
     </div>
   );
