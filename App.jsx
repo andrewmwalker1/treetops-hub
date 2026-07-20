@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.3";
+const APP_VERSION = "1.9.4";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -675,29 +675,37 @@ function NoticeCard({ notice }) {
 // indicators and, if speedSeconds > 0, auto-advance on a timer that resets
 // whenever the slide changes (manual or automatic).
 //
-// Every slide is rendered (position: absolute, stacked on top of each
-// other) and its real height measured via ResizeObserver; the wrapper is
-// pinned to the tallest of those measured heights. This is deliberately
-// JS-measured rather than left to CSS grid/flex auto-sizing, which proved
-// unreliable across browsers for this stack-and-hide layout.
+// The visible slide is a single, always-normal-flow NoticeCard pinned to a
+// fixed height. That height comes from a separate, permanently-hidden set
+// of "prober" copies of every slide (never toggled visible/hidden) whose
+// real heights are measured via ResizeObserver and maxed together. Earlier
+// versions toggled each slide's own visibility between hidden/visible to
+// double as both the display and the measurement, which looked fine in
+// desktop testing but visibly resized on a real phone — some browsers
+// don't reliably keep layout metrics fresh for an element that keeps
+// flipping in and out of visibility. Measuring permanently-hidden probes
+// instead sidesteps that; `Math.max(prev, ...)` additionally guards
+// against the box ever shrinking once a taller measurement is seen.
 function NoticeCarousel({ notices, speedSeconds }) {
   const [index, setIndex] = useState(0);
   const [maxHeight, setMaxHeight] = useState(0);
   const touchStartX = useRef(null);
-  const itemRefs = useRef([]);
+  const proberRefs = useRef([]);
   const count = notices.length;
   const key = notices.map((n) => n.id).join(",");
 
   useEffect(() => { setIndex(0); }, [key]);
 
   useLayoutEffect(() => {
+    setMaxHeight(0);
     const measure = () => {
-      const heights = itemRefs.current.map((el) => el?.offsetHeight || 0);
-      setMaxHeight(Math.max(0, ...heights));
+      const heights = proberRefs.current.map((el) => el?.offsetHeight || 0);
+      const newMax = Math.max(0, ...heights);
+      setMaxHeight((prev) => Math.max(prev, newMax));
     };
     measure();
     const ro = new ResizeObserver(measure);
-    itemRefs.current.forEach((el) => el && ro.observe(el));
+    proberRefs.current.forEach((el) => el && ro.observe(el));
     return () => ro.disconnect();
   }, [key]);
 
@@ -722,16 +730,20 @@ function NoticeCarousel({ notices, speedSeconds }) {
 
   return (
     <div>
-      <div style={{ position: "relative", height: maxHeight || undefined }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div style={{ position: "relative" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {notices.map((n, i) => (
           <div
             key={n.id}
-            ref={(el) => { itemRefs.current[i] = el; }}
-            style={{ position: "absolute", top: 0, left: 0, width: "100%", visibility: i === index ? "visible" : "hidden", pointerEvents: i === index ? "auto" : "none" }}
+            ref={(el) => { proberRefs.current[i] = el; }}
+            aria-hidden="true"
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", visibility: "hidden", pointerEvents: "none" }}
           >
             <NoticeCard notice={n} />
           </div>
         ))}
+        <div style={{ height: maxHeight || undefined, overflow: "hidden" }}>
+          <NoticeCard notice={notices[index]} />
+        </div>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (
