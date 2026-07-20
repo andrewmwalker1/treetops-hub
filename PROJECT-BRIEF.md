@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.3)
+**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.4)
 
 ## Who you're talking to
 
@@ -106,7 +106,7 @@ it — don't rebuild the theme from scratch.
 - **Notices** — optional start/end dates per notice; only currently-live
   notices show to guests (blank dates = always show). Admin list shows
   Live/Scheduled status.
-- **v1.9.0–1.9.3:** Home's featured-notice slot is now a swipeable
+- **v1.9.0–1.9.4:** Home's featured-notice slot is now a swipeable
   carousel. Admin can star more than one notice (`AdminNotices` no
   longer clears other stars when one is toggled); `getFeaturedNotices()`
   shows every starred active notice, in list order, falling back to
@@ -116,20 +116,36 @@ it — don't rebuild the theme from scratch.
   admin-configurable under Settings → Home featured notices → Carousel
   transition speed (`settings.noticeCarouselSpeed`, seconds, 0 = off),
   stored in the existing `settings` key in `app_data` — no schema
-  change needed. The box is fixed at the height of the tallest featured
-  notice so it doesn't resize as guests swipe/auto-advance between
-  notices of different lengths. **v1.9.2's first attempt at this** used
-  a CSS grid stacking trick (`gridArea: "1 / 1"` + `visibility: hidden`)
-  — it worked in this session's own Chromium testing but Andy still saw
-  the box resizing on his real device. **v1.9.3 replaced it** with a
-  JS-measured height instead of relying on the browser's own grid
-  track-sizing: every slide renders absolutely positioned/stacked, its
-  real height is measured via `ResizeObserver`, and the wrapper is
-  pinned to the tallest measured height (`NoticeCarousel` in `App.jsx`).
-  If a future device report says it's *still* resizing, suspect the
-  service worker serving a stale cached bundle before a genuine layout
-  bug — the footer's `APP_VERSION` on the actual device is the fastest
-  way to confirm which build is really running.
+  change needed.
+  **The box-resizing saga (v1.9.2–1.9.4):** the box is meant to stay
+  fixed at the height of the tallest featured notice as guests
+  swipe/auto-advance. v1.9.2 (CSS grid stacking) and v1.9.3
+  (`ResizeObserver` on the same elements being toggled hidden/visible
+  for display) both looked correct in this session's own Chromium
+  testing but Andy still saw real, visible resizing on his phone —
+  confirmed for certain via a screen recording, pixel-measured frame by
+  frame (`ffmpeg` + `PIL`/numpy), which showed the box genuinely
+  jumping between two heights in sync with notice changes. **Root
+  cause:** v1.9.3 measured each slide's height using the *same element*
+  that also got toggled `visibility: hidden`/`visible` to show/hide it
+  — some mobile browsers don't reliably keep layout metrics fresh for
+  an element that keeps flipping in and out of visibility, so the
+  measurement would occasionally read a stale/smaller value and shrink
+  the box. **v1.9.4 fix:** decoupled measurement from display — a
+  separate, *permanently* hidden set of "prober" copies of every slide
+  (never toggled, so no stale-metrics risk) is measured via
+  `ResizeObserver`, while the actually-displayed slide is a plain,
+  always-normal-flow `NoticeCard` pinned to that measured height.
+  `Math.max(prev, ...)` also guards against the box ever shrinking once
+  a taller measurement has been seen. See `NoticeCarousel` in
+  `App.jsx`. **Lesson for next time a "looks fine in testing, still
+  broken on the real device" bug shows up:** ask for a short screen
+  recording early and measure it (frame extraction + pixel sampling)
+  rather than trusting screenshots or eyeballing — two static
+  screenshots of this exact bug looked identical by eye and even
+  pixel-diffed as identical in one comparison, because they happened to
+  be two notices of coincidentally similar length; only the video,
+  measured frame-by-frame, proved the resize was real.
 - **Explore & Contractors** — each entry can have phone (Call button),
   address (Directions button via Google Maps), and website (Website
   button — left blank for Facebook-only businesses).
