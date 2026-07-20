@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useLayoutEffect } from "react";
 import {
   Home, Bell, ClipboardList, Info, MoreHorizontal, ChevronLeft, ChevronRight,
   Check, Wifi, Zap, PhoneCall, MapPin, Car, Home as HomeIcon2, Lock, Plus, Trash2,
@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.2";
+const APP_VERSION = "1.9.3";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -674,13 +674,32 @@ function NoticeCard({ notice }) {
 // NoticeCard. Two or more render as a swipeable carousel with dot
 // indicators and, if speedSeconds > 0, auto-advance on a timer that resets
 // whenever the slide changes (manual or automatic).
+//
+// Every slide is rendered (position: absolute, stacked on top of each
+// other) and its real height measured via ResizeObserver; the wrapper is
+// pinned to the tallest of those measured heights. This is deliberately
+// JS-measured rather than left to CSS grid/flex auto-sizing, which proved
+// unreliable across browsers for this stack-and-hide layout.
 function NoticeCarousel({ notices, speedSeconds }) {
   const [index, setIndex] = useState(0);
+  const [maxHeight, setMaxHeight] = useState(0);
   const touchStartX = useRef(null);
+  const itemRefs = useRef([]);
   const count = notices.length;
   const key = notices.map((n) => n.id).join(",");
 
   useEffect(() => { setIndex(0); }, [key]);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const heights = itemRefs.current.map((el) => el?.offsetHeight || 0);
+      setMaxHeight(Math.max(0, ...heights));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    itemRefs.current.forEach((el) => el && ro.observe(el));
+    return () => ro.disconnect();
+  }, [key]);
 
   useEffect(() => {
     if (count <= 1 || !speedSeconds) return;
@@ -703,11 +722,13 @@ function NoticeCarousel({ notices, speedSeconds }) {
 
   return (
     <div>
-      {/* All slides are stacked in the same grid cell so the row sizes to the
-          tallest one — the box no longer resizes as the visible slide changes. */}
-      <div style={{ display: "grid" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div style={{ position: "relative", height: maxHeight || undefined }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {notices.map((n, i) => (
-          <div key={n.id} style={{ gridArea: "1 / 1", visibility: i === index ? "visible" : "hidden" }}>
+          <div
+            key={n.id}
+            ref={(el) => { itemRefs.current[i] = el; }}
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", visibility: i === index ? "visible" : "hidden", pointerEvents: i === index ? "auto" : "none" }}
+          >
             <NoticeCard notice={n} />
           </div>
         ))}
