@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.9";
+const APP_VERSION = "1.9.10";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -741,9 +741,23 @@ function NoticeCarousel({ notices, speedSeconds }) {
 
   return (
     <div>
+      {/* transform + willChange force this onto its own GPU compositing layer.
+          This is a documented Safari/WebKit quirk: overflow:hidden alone doesn't
+          reliably re-clip when a child's content changes without the wrapper's
+          own box changing — layout (getComputedStyle/getBoundingClientRect) came
+          back correct on every slide, but the painted pixels lagged behind for
+          shorter slides. Promoting to a real compositing layer is the standard,
+          low-risk fix for that class of stale-clip bug. */}
       <div
         ref={wrapRef}
-        style={{ position: "relative", height: maxHeight || undefined, overflow: "hidden" }}
+        style={{
+          position: "relative",
+          height: maxHeight || undefined,
+          overflow: "hidden",
+          transform: "translateZ(0)",
+          WebkitTransform: "translateZ(0)",
+          willChange: "transform",
+        }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
