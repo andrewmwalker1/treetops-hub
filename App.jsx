@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.4";
+const APP_VERSION = "1.9.5";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -744,6 +744,10 @@ function NoticeCarousel({ notices, speedSeconds }) {
         <div style={{ height: maxHeight || undefined, overflow: "hidden" }}>
           <NoticeCard notice={notices[index]} />
         </div>
+        {/* TEMPORARY diagnostic readout — remove once the resize bug is confirmed fixed. */}
+        <span style={{ position: "absolute", top: 4, right: 4, fontSize: 10, fontFamily: "monospace", color: "#fff", background: "rgba(180,72,47,0.85)", padding: "2px 5px", borderRadius: 4, zIndex: 10 }}>
+          maxH={maxHeight} idx={index} n={notices.length}
+        </span>
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (
