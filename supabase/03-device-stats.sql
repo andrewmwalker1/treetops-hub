@@ -98,6 +98,11 @@ as $$
         )
     ),
     'heatmap', (
+      -- The 30-day window below needs the ::bigint cast: 30*24*60*60*1000
+      -- = 2,592,000,000, which overflows Postgres's plain "integer" type
+      -- (max ~2.147 billion) and made the whole function error out with
+      -- "22003: integer out of range" — the 7-day windows above stay
+      -- under that limit so they didn't show the bug.
       select coalesce(json_agg(row_to_json(t)), '[]'::json)
       from (
         select
@@ -106,7 +111,7 @@ as $$
           count(*) as count
         from usage_events
         where type = 'app_open'
-          and ts >= (extract(epoch from now()) * 1000 - 30 * 24 * 60 * 60 * 1000)
+          and ts >= (extract(epoch from now()) * 1000 - 30::bigint * 24 * 60 * 60 * 1000)
         group by dow, hour
       ) t
     )

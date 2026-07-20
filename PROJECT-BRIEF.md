@@ -65,7 +65,19 @@ into the app itself, so Andy can manage content without touching code.
     `push_subscriptions`, plus a `get_admin_stats()` aggregate RPC for
     the Stats tab (active users, opt-in rate, busiest-times heatmap).
     **Confirmed applied (20 Jul 2026)** — `push_subscriptions.device_id`
-    has live data and `get_admin_stats()` exists. Note:
+    has live data and `get_admin_stats()` exists.
+    **Bug found & fixed (20 Jul 2026):** as originally deployed,
+    `get_admin_stats()` errored on every call with `22003: integer out
+    of range` — the heatmap's 30-day window did `30 * 24 * 60 * 60 *
+    1000` as plain integer math (2,592,000,000, over the ~2.147 billion
+    int4 limit), which made PostgREST return an error and the app's
+    `loadAdminStats()` silently fall back to all zeros (Andy noticed
+    "Notification subscribers" looked wrong on the Stats tab — this is
+    why: the *whole* RPC was failing, not just that one number). Fixed
+    by casting to bigint (`30::bigint * 24 * ...`) — same live-tested,
+    re-verified `push_subscribers` now returns 18, matching the real row
+    count. The file in this repo has the fix; the live function was
+    updated to match via the Supabase SQL editor. Note:
     `upsert_push_subscription` now exists as two overloads (the original
     3-argument version and the new 4-argument `p_device_id` version) —
     Postgres treats differing argument lists as distinct functions
