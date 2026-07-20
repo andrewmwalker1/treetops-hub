@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "1.9.1";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -703,16 +703,8 @@ function NoticeCarousel({ notices, speedSeconds }) {
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <button onClick={() => goTo(index - 1)} aria-label="Previous notice" style={carouselArrow}>
-          <ChevronLeft size={16} color={C.bark} />
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-          <NoticeCard notice={notices[index]} />
-        </div>
-        <button onClick={() => goTo(index + 1)} aria-label="Next notice" style={carouselArrow}>
-          <ChevronRight size={16} color={C.bark} />
-        </button>
+      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <NoticeCard notice={notices[index]} />
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (
@@ -727,8 +719,6 @@ function NoticeCarousel({ notices, speedSeconds }) {
     </div>
   );
 }
-
-const carouselArrow = { background: "none", border: "none", cursor: "pointer", flexShrink: 0, padding: 6, display: "flex", alignItems: "center", justifyContent: "center" };
 
 function NoticesScreen({ notices: allNotices }) {
   const notices = allNotices.filter(isNoticeActive);
@@ -2623,7 +2613,7 @@ function AdminSettings({ settings, setSettings }) {
           </select>
         </label>
         <p style={{ fontSize: 11.5, color: C.bark, margin: "8px 0 0" }}>
-          Only used when two or more notices are starred as featured on Home — guests can always swipe or tap the arrows regardless of this setting.
+          Only used when two or more notices are starred as featured on Home — guests can always swipe (or tap a dot) regardless of this setting.
         </p>
       </div>
     </div>
