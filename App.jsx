@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.1";
+const APP_VERSION = "1.9.2";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -703,8 +703,14 @@ function NoticeCarousel({ notices, speedSeconds }) {
 
   return (
     <div>
-      <div onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
-        <NoticeCard notice={notices[index]} />
+      {/* All slides are stacked in the same grid cell so the row sizes to the
+          tallest one — the box no longer resizes as the visible slide changes. */}
+      <div style={{ display: "grid" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        {notices.map((n, i) => (
+          <div key={n.id} style={{ gridArea: "1 / 1", visibility: i === index ? "visible" : "hidden" }}>
+            <NoticeCard notice={n} />
+          </div>
+        ))}
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (

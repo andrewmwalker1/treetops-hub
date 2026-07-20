@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.1)
+**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.2)
 
 ## Who you're talking to
 
@@ -106,7 +106,7 @@ it — don't rebuild the theme from scratch.
 - **Notices** — optional start/end dates per notice; only currently-live
   notices show to guests (blank dates = always show). Admin list shows
   Live/Scheduled status.
-- **v1.9.0–1.9.1:** Home's featured-notice slot is now a swipeable
+- **v1.9.0–1.9.2:** Home's featured-notice slot is now a swipeable
   carousel. Admin can star more than one notice (`AdminNotices` no
   longer clears other stars when one is toggled); `getFeaturedNotices()`
   shows every starred active notice, in list order, falling back to
@@ -116,7 +116,10 @@ it — don't rebuild the theme from scratch.
   admin-configurable under Settings → Home featured notices → Carousel
   transition speed (`settings.noticeCarouselSpeed`, seconds, 0 = off),
   stored in the existing `settings` key in `app_data` — no schema
-  change needed.
+  change needed. v1.9.2 fixed the box resizing as guests swipe between
+  notices of different lengths: all slides render stacked in the same
+  CSS grid cell (`gridArea: "1 / 1"`, others `visibility: hidden`) so
+  the row height is driven by the tallest slide, not the current one.
 - **Explore & Contractors** — each entry can have phone (Call button),
   address (Directions button via Google Maps), and website (Website
   button — left blank for Facebook-only businesses).
