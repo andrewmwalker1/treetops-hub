@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Home, Bell, ClipboardList, Info, MoreHorizontal, ChevronLeft, ChevronRight,
   Check, Wifi, Zap, PhoneCall, MapPin, Car, Home as HomeIcon2, Lock, Plus, Trash2,
@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.11";
+const APP_VERSION = "1.9.12";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -675,73 +675,38 @@ function NoticeCard({ notice }) {
 // indicators and, if speedSeconds > 0, auto-advance on a timer that resets
 // whenever the slide changes (manual or automatic).
 //
-// The visible slide is a single, always-normal-flow NoticeCard pinned to a
-// fixed height. That height comes from a separate, permanently-hidden set
-// of "prober" copies of every slide (never toggled visible/hidden) whose
-// real heights are measured via ResizeObserver and maxed together. Earlier
-// versions toggled each slide's own visibility between hidden/visible to
-// double as both the display and the measurement, which looked fine in
-// desktop testing but visibly resized on a real phone — some browsers
-// don't reliably keep layout metrics fresh for an element that keeps
-// flipping in and out of visibility. Measuring permanently-hidden probes
-// instead sidesteps that; `Math.max(prev, ...)` additionally guards
-// against the box ever shrinking once a taller measurement is seen.
+// Every slide is always mounted, all stacked in the same CSS grid cell —
+// the ONLY thing that changes per slide is `opacity` (1 for the current
+// one, 0 for the rest). The box's height is never computed by JavaScript;
+// it's the browser's own native grid track sizing, driven by all four
+// slides' real, fully-painted layout at all times.
+//
+// This replaced several earlier versions (see git history on this file)
+// that instead measured one slide's height via JS (ResizeObserver /
+// getBoundingClientRect) and applied it as a fixed `height` style to a
+// single visible slide. Those were verified correct at the React/DOM
+// level on a real device — getComputedStyle and getBoundingClientRect
+// both reported the right fixed height on every slide — but the actual
+// painted pixels still didn't match for shorter slides, a stale-paint
+// desync that survived a forced compositing layer, a forced fresh DOM
+// node per slide, and an active repaint nudge. That pattern (JS state
+// correct, paint wrong) matches a documented, if unconfirmed, class of
+// React 18 + Safari bugs where a state-driven style update doesn't
+// reliably reach the screen. Since there's no JS-computed height left to
+// go stale here, that whole bug class no longer applies.
 function NoticeCarousel({ notices, speedSeconds }) {
   const [index, setIndex] = useState(0);
-  const [maxHeight, setMaxHeight] = useState(0);
-  const [debugInfo, setDebugInfo] = useState("");
   const touchStartX = useRef(null);
-  const proberRefs = useRef([]);
-  const wrapRef = useRef(null);
   const count = notices.length;
   const key = notices.map((n) => n.id).join(",");
 
   useEffect(() => { setIndex(0); }, [key]);
-
-  useLayoutEffect(() => {
-    setMaxHeight(0);
-    const measure = () => {
-      const heights = proberRefs.current.map((el) => el?.offsetHeight || 0);
-      const widths = proberRefs.current.map((el) => el?.offsetWidth || 0);
-      const newMax = Math.max(0, ...heights);
-      setMaxHeight((prev) => Math.max(prev, newMax));
-      setDebugInfo(`h=[${heights.join(",")}] w=[${widths.join(",")}] wrapW=${wrapRef.current?.offsetWidth}`);
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    proberRefs.current.forEach((el) => el && ro.observe(el));
-    return () => ro.disconnect();
-  }, [key]);
 
   useEffect(() => {
     if (count <= 1 || !speedSeconds) return;
     const timer = setInterval(() => setIndex((i) => (i + 1) % count), speedSeconds * 1000);
     return () => clearInterval(timer);
   }, [count, speedSeconds, index]);
-
-  const [renderedInfo, setRenderedInfo] = useState("");
-  useLayoutEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    setRenderedInfo(`cssH=${getComputedStyle(el).height} rectH=${el.getBoundingClientRect().height.toFixed(1)}`);
-  }, [maxHeight, index]);
-
-  // Forced-repaint nudge: on at least one real device, the wrapper's own
-  // layout (getComputedStyle/getBoundingClientRect) is provably correct on
-  // every slide, but the painted pixels still lag behind for some slides -
-  // a stale-paint bug specifically reported for standalone "Add to Home
-  // Screen" web apps on iOS, where WKWebView can skip repainting content
-  // changed by JS alone. Nudging opacity is a well-documented forced-repaint
-  // workaround for that class of bug.
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    el.style.opacity = "0.999";
-    const raf = requestAnimationFrame(() => {
-      el.style.opacity = "1";
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [index, maxHeight]);
 
   if (count <= 1) return <NoticeCard notice={notices[0]} />;
 
@@ -758,56 +723,16 @@ function NoticeCarousel({ notices, speedSeconds }) {
 
   return (
     <div>
-      {/* transform + willChange force this onto its own GPU compositing layer.
-          This is a documented Safari/WebKit quirk: overflow:hidden alone doesn't
-          reliably re-clip when a child's content changes without the wrapper's
-          own box changing — layout (getComputedStyle/getBoundingClientRect) came
-          back correct on every slide, but the painted pixels lagged behind for
-          shorter slides. Promoting to a real compositing layer is the standard,
-          low-risk fix for that class of stale-clip bug. */}
-      <div
-        ref={wrapRef}
-        style={{
-          position: "relative",
-          height: maxHeight || undefined,
-          overflow: "hidden",
-          transform: "translateZ(0)",
-          WebkitTransform: "translateZ(0)",
-          willChange: "transform",
-        }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
-      >
+      <div style={{ display: "grid" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {notices.map((n, i) => (
           <div
             key={n.id}
-            ref={(el) => { proberRefs.current[i] = el; }}
-            aria-hidden="true"
-            // Off-screen, but NOT visibility:hidden — on at least one real
-            // mobile browser, visibility:hidden elements never got a full,
-            // settled text-wrap layout pass, so offsetHeight came back too
-            // small (roughly one line short) and the "fixed" height did
-            // nothing. Being genuinely off-canvas (not visibility-hidden)
-            // forces a real, accurate layout while staying invisible to
-            // the guest; the wrapper's own overflow:hidden above is a
-            // backstop against this ever being visible regardless.
-            style={{ position: "absolute", top: 0, left: "-9999px", width: "100%", pointerEvents: "none" }}
+            aria-hidden={i !== index}
+            style={{ gridArea: "1 / 1", opacity: i === index ? 1 : 0, pointerEvents: i === index ? "auto" : "none" }}
           >
             <NoticeCard notice={n} />
           </div>
         ))}
-        {/* key forces a fresh DOM node per slide rather than an in-place content
-            swap — the diagnostic build proved getComputedStyle/getBoundingClientRect
-            on the wrapper both correctly report the fixed height on every slide, yet
-            the painted pixels still didn't match it for a shorter slide. That's a
-            paint/compositing desync inside the overflow:hidden clip when content is
-            swapped in place, not a layout bug — forcing a genuinely new element
-            sidesteps it since there's no stale paint state to carry over. */}
-        <NoticeCard key={notices[index].id} notice={notices[index]} />
-      </div>
-      {/* TEMPORARY diagnostic readout — remove once the resize bug is confirmed fixed. */}
-      <div style={{ fontSize: 9, fontFamily: "monospace", color: "#fff", background: "rgba(11,92,56,0.9)", padding: "3px 6px", borderRadius: 4, marginTop: 4, wordBreak: "break-all" }}>
-        maxH={maxHeight} idx={index} n={notices.length} | {debugInfo} | {renderedInfo}
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (
