@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.6";
+const APP_VERSION = "1.9.7";
 const BUILD_DATE = "20 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -689,8 +689,10 @@ function NoticeCard({ notice }) {
 function NoticeCarousel({ notices, speedSeconds }) {
   const [index, setIndex] = useState(0);
   const [maxHeight, setMaxHeight] = useState(0);
+  const [debugInfo, setDebugInfo] = useState("");
   const touchStartX = useRef(null);
   const proberRefs = useRef([]);
+  const wrapRef = useRef(null);
   const count = notices.length;
   const key = notices.map((n) => n.id).join(",");
 
@@ -700,8 +702,10 @@ function NoticeCarousel({ notices, speedSeconds }) {
     setMaxHeight(0);
     const measure = () => {
       const heights = proberRefs.current.map((el) => el?.offsetHeight || 0);
+      const widths = proberRefs.current.map((el) => el?.offsetWidth || 0);
       const newMax = Math.max(0, ...heights);
       setMaxHeight((prev) => Math.max(prev, newMax));
+      setDebugInfo(`h=[${heights.join(",")}] w=[${widths.join(",")}] wrapW=${wrapRef.current?.offsetWidth}`);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -731,6 +735,7 @@ function NoticeCarousel({ notices, speedSeconds }) {
   return (
     <div>
       <div
+        ref={wrapRef}
         style={{ position: "relative", height: maxHeight || undefined, overflow: "hidden" }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -754,10 +759,10 @@ function NoticeCarousel({ notices, speedSeconds }) {
           </div>
         ))}
         <NoticeCard notice={notices[index]} />
-        {/* TEMPORARY diagnostic readout — remove once the resize bug is confirmed fixed. */}
-        <span style={{ position: "absolute", top: 4, right: 4, fontSize: 10, fontFamily: "monospace", color: "#fff", background: "rgba(11,92,56,0.85)", padding: "2px 5px", borderRadius: 4, zIndex: 10 }}>
-          maxH={maxHeight} idx={index} n={notices.length}
-        </span>
+      </div>
+      {/* TEMPORARY diagnostic readout — remove once the resize bug is confirmed fixed. */}
+      <div style={{ fontSize: 9, fontFamily: "monospace", color: "#fff", background: "rgba(11,92,56,0.9)", padding: "3px 6px", borderRadius: 4, marginTop: 4, wordBreak: "break-all" }}>
+        maxH={maxHeight} idx={index} n={notices.length} | {debugInfo}
       </div>
       <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 10 }}>
         {notices.map((n, i) => (
