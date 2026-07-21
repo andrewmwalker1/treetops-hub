@@ -86,18 +86,17 @@ into the app itself, so Andy can manage content without touching code.
     but worth tidying up (dropping the old overload) at some point.
   - `04-info-pdfs-storage.sql` — adds the missing Row Level Security
     policies on `storage.objects` that let the anon key upload PDFs to
-    the `info-pdfs` bucket. **Not yet confirmed applied** — written
-    21 Jul 2026 in response to Admin → Info's "Upload a PDF" failing
-    with `403: new row violates row-level security policy`. Root cause:
-    marking a bucket "Public" in the dashboard only allows anonymous
-    *reads*; it does not grant anon *uploads* — that's this separate
-    policy, which was apparently never created when the `info-pdfs`
-    bucket was set up. **This session had no Supabase CLI/credentials
-    available to run it directly** (unlike `setup-admin-pin.sql` and
-    `03-device-stats.sql` above, which a session with CLI access
-    applied and verified) — Andy needs to run this one himself via the
-    Supabase SQL Editor. Confirm it actually fixed the upload before
-    marking this applied.
+    the `info-pdfs` bucket. Written 21 Jul 2026 in response to
+    Admin → Info's "Upload a PDF" failing with `403: new row violates
+    row-level security policy`. Root cause: marking a bucket "Public"
+    in the dashboard only allows anonymous *reads*; it does not grant
+    anon *uploads* — that's this separate policy, which was apparently
+    never created when the `info-pdfs` bucket was set up. This session
+    had no Supabase CLI/credentials available to run it directly
+    (unlike `setup-admin-pin.sql` and `03-device-stats.sql` above,
+    which a session with CLI access applied and verified), so Andy ran
+    it himself via the Supabase SQL Editor. **Confirmed applied and
+    working (21 Jul 2026)** — PDF upload succeeds now.
   - Admin PIN inside the app (fallback/legacy reference): `1960`
 - No user auth beyond the admin PIN. Anon key is public by design — RLS
   and `security definer` Postgres functions are the real access control,
