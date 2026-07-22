@@ -5,7 +5,7 @@ import {
   Settings, LogOut, FileText, Calendar, ShieldCheck, ChevronUp, ChevronDown, Star,
   Compass, Search, Globe, PawPrint, X, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle,
   CloudRain, CloudSnow, CloudLightning, Languages, Navigation, Wrench,
-  Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload, Users,
+  Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload, Users, Paperclip,
 } from "lucide-react";
 
 // ---- Brand tokens ----
@@ -30,8 +30,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.9.12";
-const BUILD_DATE = "20 Jul 2026";
+const APP_VERSION = "1.10.0";
+const BUILD_DATE = "21 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -233,22 +233,27 @@ async function saveData(key, value) {
   }
 }
 
-// Storage bucket for admin-uploaded PDF guides. Must be created as a PUBLIC
-// bucket in the Supabase project (Storage → New bucket → name "info-pdfs" →
-// toggle "Public bucket" on) before uploads will work.
-const PDF_STORAGE_BUCKET = "info-pdfs";
+// Storage bucket for admin-uploaded files — Info's PDF guides and Notices'
+// voucher/leaflet attachments both share this one bucket (a file is just a
+// file to Supabase Storage; no need for a second bucket + a second RLS
+// migration). Must be created as a PUBLIC bucket in the Supabase project
+// (Storage → New bucket → name "info-pdfs" → toggle "Public bucket" on),
+// with the anon key additionally granted INSERT via a Row Level Security
+// policy — see supabase/04-info-pdfs-storage.sql — before uploads will work.
+const UPLOAD_STORAGE_BUCKET = "info-pdfs";
 
-// Uploads a PDF to Supabase Storage and returns its public URL, or throws
+// Uploads a file to Supabase Storage and returns its public URL, or throws
 // with a readable message on failure (e.g. bucket missing, policy denies it).
-async function uploadPdfToStorage(file) {
+// Caller is responsible for validating file type before calling this.
+async function uploadFileToStorage(file) {
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "-");
   const path = `${Date.now()}-${uid()}-${safeName}`;
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${PDF_STORAGE_BUCKET}/${path}`, {
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${UPLOAD_STORAGE_BUCKET}/${path}`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": file.type || "application/pdf",
+      "Content-Type": file.type || "application/octet-stream",
     },
     body: file,
   });
@@ -256,7 +261,7 @@ async function uploadPdfToStorage(file) {
     const text = await res.text().catch(() => "");
     throw new Error(`Upload failed (${res.status}): ${text || "check the bucket exists and is public"}`);
   }
-  return `${SUPABASE_URL}/storage/v1/object/public/${PDF_STORAGE_BUCKET}/${path}`;
+  return `${SUPABASE_URL}/storage/v1/object/public/${UPLOAD_STORAGE_BUCKET}/${path}`;
 }
 
 // Converts the VAPID public key from base64url (how it's normally shared)
@@ -658,7 +663,20 @@ function EmptyState({ text }) {
 function NoticeCard({ notice }) {
   return (
     <div style={card}>
-      <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: C.green, background: "#E1F5E7", padding: "3px 9px", borderRadius: 20, marginBottom: 8 }}>{notice.tag}</span>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <span style={{ display: "inline-block", fontSize: 11, fontWeight: 700, color: C.green, background: "#E1F5E7", padding: "3px 9px", borderRadius: 20, marginBottom: 8 }}>{notice.tag}</span>
+        {notice.attachmentUrl && (
+          <a
+            href={notice.attachmentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View voucher / leaflet"
+            style={{ background: C.sandDeep, border: "none", borderRadius: 8, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <Paperclip size={13} color={C.green} />
+          </a>
+        )}
+      </div>
       <p style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: C.ink }}>{notice.title}</p>
       <p style={{ margin: 0, fontSize: 13.5, color: C.bark, lineHeight: 1.45 }}>{notice.body}</p>
       {notice.link && (
@@ -1409,7 +1427,8 @@ function moveItem(arr, index, direction) {
   return next;
 }
 
-const EMPTY_NOTICE = { tag: "", title: "", body: "", link: "", startDate: "", endDate: "" };
+const EMPTY_NOTICE = { tag: "", title: "", body: "", link: "", startDate: "", endDate: "", attachmentUrl: "" };
+const ATTACHMENT_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 function AdminNotices({ notices, setNotices }) {
   const [editingId, setEditingId] = useState(null); // null = adding new
@@ -1420,6 +1439,9 @@ function AdminNotices({ notices, setNotices }) {
   const [notifyingId, setNotifyingId] = useState(null);
   const [notifyResultId, setNotifyResultId] = useState(null);
   const [notifyResultText, setNotifyResultText] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
 
   const startEdit = (notice) => {
     setEditingId(notice.id);
@@ -1430,14 +1452,37 @@ function AdminNotices({ notices, setNotices }) {
       link: notice.link || "",
       startDate: notice.startDate || "",
       endDate: notice.endDate || "",
+      attachmentUrl: notice.attachmentUrl || "",
     });
     setSendResult("");
+    setUploadError("");
   };
   const startNew = () => {
     setEditingId(null);
     setDraft(EMPTY_NOTICE);
     setNotify(true);
     setSendResult("");
+    setUploadError("");
+  };
+
+  const handleFileChosen = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    if (!ATTACHMENT_TYPES.includes(file.type)) {
+      setUploadError("Please choose a JPG, PNG or PDF file.");
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const url = await uploadFileToStorage(file);
+      setDraft((d) => ({ ...d, attachmentUrl: url }));
+    } catch (err) {
+      setUploadError(err.message || "Upload failed — please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const save = async () => {
@@ -1509,6 +1554,20 @@ function AdminNotices({ notices, setNotices }) {
         <AdminInput label="Title" value={draft.title} onChange={(v) => setDraft({ ...draft, title: v })} />
         <AdminInput label="Body" value={draft.body} onChange={(v) => setDraft({ ...draft, body: v })} textarea />
         <AdminInput label="Link to blog post (optional)" value={draft.link} onChange={(v) => setDraft({ ...draft, link: v })} placeholder="https://www.treetops.co.uk/blog/..." />
+        <AdminInput label="Voucher / leaflet link (optional)" value={draft.attachmentUrl} onChange={(v) => setDraft({ ...draft, attachmentUrl: v })} placeholder="https://..." />
+        <input ref={fileInputRef} type="file" accept="application/pdf,image/jpeg,image/png" onChange={handleFileChosen} style={{ display: "none" }} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          style={{ background: C.sandDeep, border: "none", borderRadius: 10, padding: "9px 14px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700, color: C.ink, cursor: uploading ? "default" : "pointer", marginTop: "-6px", marginBottom: 12, opacity: uploading ? 0.6 : 1 }}
+        >
+          <Paperclip size={14} /> {uploading ? "Uploading…" : "Upload a voucher or leaflet"}
+        </button>
+        {uploadError && <p style={{ fontSize: 11.5, color: "#B3261E", margin: "-6px 0 12px" }}>{uploadError}</p>}
+        {draft.attachmentUrl && !uploadError && (
+          <p style={{ fontSize: 11.5, color: C.bark, margin: "-6px 0 12px" }}>Voucher/leaflet attached ✓</p>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           <AdminInput label="Start date (optional)" type="date" value={draft.startDate} onChange={(v) => setDraft({ ...draft, startDate: v })} />
           <AdminInput label="End date (optional)" type="date" value={draft.endDate} onChange={(v) => setDraft({ ...draft, endDate: v })} />
@@ -1555,7 +1614,7 @@ function AdminNotices({ notices, setNotices }) {
           <div key={n.id}>
             <AdminListItem
               title={n.title}
-              subtitle={`${n.link ? `${n.tag} · linked to blog` : n.tag}${dateNote}`}
+              subtitle={`${n.tag}${n.link ? " · linked to blog" : ""}${n.attachmentUrl ? " · has voucher/leaflet" : ""}${dateNote}`}
               onEdit={() => startEdit(n)}
               onDelete={() => remove(n.id)}
               onMoveUp={() => move(i, -1)}
@@ -1686,7 +1745,7 @@ function AdminInfo({ info, setInfo }) {
     setUploading(true);
     setUploadError("");
     try {
-      const url = await uploadPdfToStorage(file);
+      const url = await uploadFileToStorage(file);
       setDraft((d) => ({ ...d, pdfLink: url }));
     } catch (err) {
       setUploadError(err.message || "Upload failed — please try again.");

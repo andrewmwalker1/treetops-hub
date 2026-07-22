@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 20 Jul 2026 (App.jsx APP_VERSION 1.9.12)
+**Last updated:** 21 Jul 2026 (App.jsx APP_VERSION 1.10.0)
 
 ## Who you're talking to
 
@@ -119,6 +119,20 @@ it — don't rebuild the theme from scratch.
 - **Notices** — optional start/end dates per notice; only currently-live
   notices show to guests (blank dates = always show). Admin list shows
   Live/Scheduled status.
+- **v1.10.0:** Notices can have an optional voucher/leaflet attachment
+  (JPG, PNG or PDF) — admin uploads via `NoticeCard`'s new "Upload a
+  voucher or leaflet" button (or pastes a URL directly) in
+  `AdminNotices`, stored on the notice as `attachmentUrl`. Guests see a
+  small paperclip icon on the notice card (`NoticeCard`, top-right next
+  to the tag chip, same icon-button style as the Explore business
+  "more info" button) that opens the file in a new tab — no in-app
+  preview, matching how Info's PDF guides already work. Reuses the same
+  `info-pdfs` storage bucket and RLS policy as Info's PDF guides (see
+  `04-info-pdfs-storage.sql`) rather than needing a second bucket/
+  migration — `uploadPdfToStorage()` was generalised and renamed to
+  `uploadFileToStorage()` for this (both call sites still validate
+  their own allowed file types before calling it). Admin's notices list
+  also shows "· has voucher/leaflet" in the subtitle when present.
 - **v1.9.0–1.9.12:** Home's featured-notice slot is now a swipeable
   carousel. Admin can star more than one notice (`AdminNotices` no
   longer clears other stars when one is toggled); `getFeaturedNotices()`
