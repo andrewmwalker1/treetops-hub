@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 21 Jul 2026 (App.jsx APP_VERSION 1.10.0)
+**Last updated:** 22 Jul 2026 (App.jsx APP_VERSION 1.11.0)
 
 ## Who you're talking to
 
@@ -246,6 +246,21 @@ it — don't rebuild the theme from scratch.
 - **Explore & Contractors** — each entry can have phone (Call button),
   address (Directions button via Google Maps), and website (Website
   button — left blank for Facebook-only businesses).
+- **v1.11.0:** Explore businesses can now have the same optional
+  voucher/leaflet attachment (JPG/PNG/PDF) as notices got in v1.10.0 —
+  same "Upload a voucher or leaflet" UI (or paste a URL) in
+  `AdminDirectoryEntries`, same shared `info-pdfs` bucket, stored as
+  `attachmentUrl`. On `DirectoryEntryCard`, a voucher/leaflet **replaces**
+  the existing "ⓘ" description icon rather than showing alongside it —
+  Andy's call, on the basis that a voucher/leaflet is usually
+  self-explanatory enough to stand in for the short description, and
+  showing two small icons in that corner looked cluttered. So: only the
+  paperclip shows if a business has both a description and an
+  attachment; the description text becomes inaccessible to guests in
+  that case (still saved/editable in admin, just not surfaced). Only the
+  ⓘ shows if it has just a description; nothing shows if it has neither.
+  This card is shared by Explore and Home's "Featured businesses", so
+  the same rule applies in both places automatically.
 - **Forms** — links out to MyFormFlow; four forms currently configured.
 - **Admin Stats tab** — app opens (7-day chart), % opened from home
   screen vs browser, most-called/most-navigated-to/most-visited-website
