@@ -30,8 +30,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.10.0";
-const BUILD_DATE = "21 Jul 2026";
+const APP_VERSION = "1.11.0";
+const BUILD_DATE = "22 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -799,7 +799,19 @@ function DirectoryEntryCard({ entry, categories }) {
       </div>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
         <p style={{ margin: "0 0 4px", fontSize: 14.5, fontWeight: 700, color: C.ink, lineHeight: 1.3 }}>{entry.name}</p>
-        {entry.description && (
+        {/* A voucher/leaflet takes priority over the description icon — a business
+            never shows both, to avoid two small icons crowding this corner. */}
+        {entry.attachmentUrl ? (
+          <a
+            href={entry.attachmentUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View voucher / leaflet"
+            style={{ background: C.sandDeep, border: "none", borderRadius: 8, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+          >
+            <Paperclip size={13} color={C.green} />
+          </a>
+        ) : entry.description && (
           <button onClick={() => setShowInfo(true)} style={{ background: C.sandDeep, border: "none", borderRadius: 8, width: 26, height: 26, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }}>
             <Info size={13} color={C.green} />
           </button>
@@ -1879,13 +1891,16 @@ function AdminDirectoryCategories({ categories, setCategories, directory, setDir
   );
 }
 
-const EMPTY_DIR_ENTRY = { name: "", categoryId: "", address: "", phone: "", website: "", distance: "", dogFriendly: false, description: "", featured: false };
+const EMPTY_DIR_ENTRY = { name: "", categoryId: "", address: "", phone: "", website: "", distance: "", dogFriendly: false, description: "", featured: false, attachmentUrl: "" };
 
 function AdminDirectoryEntries({ directory, setDirectory, categories }) {
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft] = useState(EMPTY_DIR_ENTRY);
   const [query, setQuery] = useState("");
   const [filterCat, setFilterCat] = useState("all");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef(null);
 
   const startEdit = (entry) => {
     setEditingId(entry.id);
@@ -1893,11 +1908,34 @@ function AdminDirectoryEntries({ directory, setDirectory, categories }) {
       name: entry.name || "", categoryId: entry.categoryId || "", address: entry.address || "",
       phone: entry.phone || "", website: entry.website || "", distance: entry.distance || "",
       dogFriendly: !!entry.dogFriendly, description: entry.description || "", featured: !!entry.featured,
+      attachmentUrl: entry.attachmentUrl || "",
     });
+    setUploadError("");
   };
   const startNew = () => {
     setEditingId(null);
     setDraft({ ...EMPTY_DIR_ENTRY, categoryId: categories[0]?.id || "" });
+    setUploadError("");
+  };
+
+  const handleFileChosen = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    if (!ATTACHMENT_TYPES.includes(file.type)) {
+      setUploadError("Please choose a JPG, PNG or PDF file.");
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    try {
+      const url = await uploadFileToStorage(file);
+      setDraft((d) => ({ ...d, attachmentUrl: url }));
+    } catch (err) {
+      setUploadError(err.message || "Upload failed — please try again.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const parseMinutes = (d) => {
@@ -1960,7 +1998,23 @@ function AdminDirectoryEntries({ directory, setDirectory, categories }) {
         <AdminInput label="Phone (optional)" value={draft.phone} onChange={(v) => setDraft({ ...draft, phone: v })} placeholder="01745 560279" />
         <AdminInput label="Website (optional)" value={draft.website} onChange={(v) => setDraft({ ...draft, website: v })} placeholder="www.example.co.uk" />
         <AdminInput label="Distance from Tree Tops (optional)" value={draft.distance} onChange={(v) => setDraft({ ...draft, distance: v })} placeholder="e.g. 9 mins" />
-        <AdminInput label="Short description (optional)" value={draft.description} onChange={(v) => setDraft({ ...draft, description: v })} textarea placeholder="A sentence or two about what they offer — shown when a guest taps the info icon." />
+        <AdminInput label="Short description (optional)" value={draft.description} onChange={(v) => setDraft({ ...draft, description: v })} textarea placeholder="A sentence or two about what they offer — shown when a guest taps the info icon. Hidden if a voucher/leaflet is attached below." />
+        <AdminInput label="Voucher / leaflet link (optional)" value={draft.attachmentUrl} onChange={(v) => setDraft({ ...draft, attachmentUrl: v })} placeholder="https://..." />
+        <input ref={fileInputRef} type="file" accept="application/pdf,image/jpeg,image/png" onChange={handleFileChosen} style={{ display: "none" }} />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          style={{ background: C.sandDeep, border: "none", borderRadius: 10, padding: "9px 14px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 13, fontWeight: 700, color: C.ink, cursor: uploading ? "default" : "pointer", marginBottom: 12, opacity: uploading ? 0.6 : 1 }}
+        >
+          <Paperclip size={14} /> {uploading ? "Uploading…" : "Upload a voucher or leaflet"}
+        </button>
+        {uploadError && <p style={{ fontSize: 11.5, color: "#B3261E", margin: "-6px 0 12px" }}>{uploadError}</p>}
+        {draft.attachmentUrl && !uploadError && (
+          <p style={{ fontSize: 11.5, color: C.bark, margin: "-6px 0 12px" }}>
+            Voucher/leaflet attached ✓ — the info icon will show this instead of the description on the guest's card.
+          </p>
+        )}
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, cursor: "pointer" }}>
           <input type="checkbox" checked={draft.dogFriendly} onChange={(e) => setDraft({ ...draft, dogFriendly: e.target.checked })} style={{ width: 16, height: 16 }} />
           <span style={{ fontSize: 13, color: C.ink, fontWeight: 600 }}>Dog friendly</span>
@@ -1989,7 +2043,7 @@ function AdminDirectoryEntries({ directory, setDirectory, categories }) {
         <AdminListItem
           key={e.id}
           title={e.name}
-          subtitle={CATEGORY_NAME(categories, e.categoryId)}
+          subtitle={`${CATEGORY_NAME(categories, e.categoryId)}${e.attachmentUrl ? " · has voucher/leaflet" : ""}`}
           onEdit={() => startEdit(e)}
           onDelete={() => remove(e.id)}
           featured={!!e.featured}
@@ -2013,6 +2067,7 @@ function AdminDirectoryEntries({ directory, setDirectory, categories }) {
             ["Dog Friendly", (e) => (e.dogFriendly ? "Yes" : "No")],
             ["Featured", (e) => (e.featured ? "Yes" : "No")],
             ["Description", (e) => e.description],
+            ["Voucher/leaflet", (e) => e.attachmentUrl],
           ]
         )}
         style={{ width: "100%", marginTop: 16, padding: "10px 0", borderRadius: 10, fontSize: 12.5, fontWeight: 700, border: `1.5px solid ${C.mist}`, background: C.white, color: C.ink, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
