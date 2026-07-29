@@ -30,7 +30,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.12.0";
+const APP_VERSION = "1.12.1";
 const BUILD_DATE = "29 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -1285,7 +1285,7 @@ function MoreScreen({ onAdminTap, info, settings, go }) {
       <PushNotificationsToggle />
 
       <SectionLabel style={{ marginTop: 22 }}>Extras</SectionLabel>
-      <button onClick={() => go("whack-a-squirrel")} style={{ ...card, display: "flex", gap: 14, marginBottom: 10, width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}>
+      <button onClick={() => { logEvent("game_play", "Whack-a-Squirrel"); go("whack-a-squirrel"); }} style={{ ...card, display: "flex", gap: 14, marginBottom: 10, width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}>
         <div style={{ width: 40, height: 40, borderRadius: 11, background: C.sandDeep, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 19 }}>
           🐿️
         </div>
@@ -1811,6 +1811,11 @@ function AdminInfo({ info, setInfo }) {
     saveData("info", next);
     if (editingId === id) startNew();
   };
+  const move = (index, direction) => {
+    const next = moveItem(info, index, direction);
+    setInfo(next);
+    saveData("info", next);
+  };
 
   return (
     <div>
@@ -1847,8 +1852,18 @@ function AdminInfo({ info, setInfo }) {
         </button>
       </div>
       <SectionLabel>Current info items ({info.length})</SectionLabel>
-      {info.map((i) => (
-        <AdminListItem key={i.id} title={i.title} subtitle={i.body} onEdit={() => startEdit(i)} onDelete={() => remove(i.id)} />
+      {info.map((item, i) => (
+        <AdminListItem
+          key={item.id}
+          title={item.title}
+          subtitle={item.body}
+          onEdit={() => startEdit(item)}
+          onDelete={() => remove(item.id)}
+          onMoveUp={() => move(i, -1)}
+          onMoveDown={() => move(i, 1)}
+          disableUp={i === 0}
+          disableDown={i === info.length - 1}
+        />
       ))}
     </div>
   );
@@ -2661,6 +2676,7 @@ function AdminStats() {
   const navs = rankEvents(events, ["directory_navigate", "contractor_navigate", "emergency_navigate"]);
   const websites = rankEvents(events, ["directory_website", "contractor_website"]);
   const forms = rankEvents(events, ["form_launch"]);
+  const gamePlays = events.filter((e) => e.type === "game_play" && e.label === "Whack-a-Squirrel").length;
 
   return (
     <div>
@@ -2681,6 +2697,7 @@ function AdminStats() {
 
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
         <StatCard icon={Bell} label="Of active devices, notifications on" value={`${notifOptInPct}%`} />
+        <StatCard icon={Star} label="Whack-a-Squirrel plays" value={gamePlays} />
       </div>
 
       <SectionLabel>Opens per day</SectionLabel>

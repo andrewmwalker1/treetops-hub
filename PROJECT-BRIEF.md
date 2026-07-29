@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 29 Jul 2026 (App.jsx APP_VERSION 1.12.0)
+**Last updated:** 29 Jul 2026 (App.jsx APP_VERSION 1.12.1)
 
 ## Who you're talking to
 
@@ -116,6 +116,13 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
+- **v1.12.1:** Fixed Admin → Info's reorder buttons — they rendered but
+  did nothing, since `AdminInfo`'s render loop never passed
+  `onMoveUp`/`onMoveDown`/`disableUp`/`disableDown` to `AdminListItem`
+  (unlike Notices/Forms, which do). Also logs a `game_play` usage event
+  when the Whack-a-Squirrel link is tapped (same pattern as
+  `emergency_navigate` etc.), surfaced as a "Whack-a-Squirrel plays"
+  stat card in Admin → Stats.
 - **v1.12.0:** Added a small "Whack-a-Squirrel" game, reachable from More →
   Extras. The game itself is a standalone, self-contained HTML/CSS/JS file
   (no build step, no external deps besides Google Fonts and an in-file
