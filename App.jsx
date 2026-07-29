@@ -30,8 +30,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.11.0";
-const BUILD_DATE = "22 Jul 2026";
+const APP_VERSION = "1.12.0";
+const BUILD_DATE = "29 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -1255,7 +1255,7 @@ function PushNotificationsToggle() {
   );
 }
 
-function MoreScreen({ onAdminTap, info, settings }) {
+function MoreScreen({ onAdminTap, info, settings, go }) {
   return (
     <div style={{ padding: "20px 20px 100px", background: C.sand, minHeight: "100%" }}>
       <h2 style={{ fontFamily: displayFont, fontSize: 22, color: C.ink, margin: "0 0 16px" }}>More</h2>
@@ -1284,6 +1284,17 @@ function MoreScreen({ onAdminTap, info, settings }) {
 
       <PushNotificationsToggle />
 
+      <SectionLabel style={{ marginTop: 22 }}>Extras</SectionLabel>
+      <button onClick={() => go("whack-a-squirrel")} style={{ ...card, display: "flex", gap: 14, marginBottom: 10, width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: C.sandDeep, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 19 }}>
+          🐿️
+        </div>
+        <div>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>Whack-a-Squirrel</p>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: C.bark, lineHeight: 1.45 }}>A little game for while you wait</p>
+        </div>
+      </button>
+
       <SectionLabel style={{ marginTop: 22 }}>About</SectionLabel>
       <div style={card}>
         <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>About Tree Tops</p>
@@ -1299,6 +1310,22 @@ function MoreScreen({ onAdminTap, info, settings }) {
         <span style={{ fontSize: 13.5, fontWeight: 600, color: C.bark }}>Staff admin login</span>
       </button>
       <p style={{ textAlign: "center", fontSize: 10.5, color: C.bark, opacity: 0.6, marginTop: 22 }}>Tree Tops Hub v{APP_VERSION} · built {BUILD_DATE}</p>
+    </div>
+  );
+}
+
+function WhackASquirrelScreen({ onBack }) {
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "#12251c", zIndex: 50, display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "18px 20px 10px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <button onClick={onBack} style={backBtn}><ChevronLeft size={20} color={C.ink} /></button>
+        <h2 style={{ fontFamily: displayFont, fontSize: 19, color: C.white, margin: 0 }}>Whack-a-Squirrel</h2>
+      </div>
+      <iframe
+        src="/games/whack-a-squirrel.html"
+        title="Whack-a-Squirrel"
+        style={{ flex: 1, width: "100%", border: "none" }}
+      />
     </div>
   );
 }
@@ -2897,7 +2924,8 @@ export default function TreeTopsHubApp() {
   } else if (tab === "directory") content = <DirectoryScreen directory={directory} categories={directoryCategories} />;
   else if (tab === "contractors") content = <ContractorsScreen contractors={contractors} categories={contractorCategories} />;
   else if (tab === "emergency") content = <EmergencyContactsScreen contacts={emergencyContacts} contractors={contractors} contractorCategories={contractorCategories} onBack={() => go("home")} />;
-  else content = <MoreScreen onAdminTap={() => setAdminMode("gate")} info={info} settings={settings} />;
+  else if (tab === "whack-a-squirrel") content = <WhackASquirrelScreen onBack={() => go("more")} />;
+  else content = <MoreScreen onAdminTap={() => setAdminMode("gate")} info={info} settings={settings} go={go} />;
 
   return frame(
     <>

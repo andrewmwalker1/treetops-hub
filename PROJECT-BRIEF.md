@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 22 Jul 2026 (App.jsx APP_VERSION 1.11.0)
+**Last updated:** 29 Jul 2026 (App.jsx APP_VERSION 1.12.0)
 
 ## Who you're talking to
 
@@ -116,6 +116,18 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
+- **v1.12.0:** Added a small "Whack-a-Squirrel" game, reachable from More →
+  Extras. The game itself is a standalone, self-contained HTML/CSS/JS file
+  (no build step, no external deps besides Google Fonts and an in-file
+  base64 image) at `public/games/whack-a-squirrel.html`, deliberately kept
+  as a static asset rather than converted to a React component — it manages
+  its own DOM/animation loop, so it's shown full-screen in an iframe
+  (`WhackASquirrelScreen`) rather than integrated. High score persists via
+  `localStorage` (swapped in from the original `window.storage` calls,
+  which only exist in the Claude Artifacts environment the game was
+  originally prototyped in). No schema/Supabase changes. Vite's
+  `injectManifest` PWA config already globs `**/*.html` under `public/`, so
+  the new file is automatically precached — no explicit listing needed.
 - **Notices** — optional start/end dates per notice; only currently-live
   notices show to guests (blank dates = always show). Admin list shows
   Live/Scheduled status.
