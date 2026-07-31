@@ -200,6 +200,16 @@
   "use strict";
 
   var HIGH_SCORE_KEY = "poop-patrol-highscore";
+
+  function safeGetHighScore(){
+    try { return parseInt(localStorage.getItem(HIGH_SCORE_KEY) || "0", 10) || 0; }
+    catch (err) { return 0; }
+  }
+  function safeSetHighScore(value){
+    try { localStorage.setItem(HIGH_SCORE_KEY, String(value)); }
+    catch (err) { /* localStorage unavailable (e.g. file:// origin) — best score just won't persist */ }
+  }
+
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var wrap = document.getElementById("canvas-wrap");
@@ -229,7 +239,7 @@
   window.addEventListener("resize", resize);
   window.addEventListener("orientationchange", function(){ setTimeout(resize, 50); });
 
-  var bestScore = parseInt(localStorage.getItem(HIGH_SCORE_KEY) || "0", 10) || 0;
+  var bestScore = safeGetHighScore();
   bestEl.textContent = bestScore;
 
   var DOG_EMOJI = ["🐶", "🐕", "🐩", "🦮", "🐕‍🦺"];
@@ -402,7 +412,7 @@
     state = "gameover";
     if (score > bestScore){
       bestScore = score;
-      localStorage.setItem(HIGH_SCORE_KEY, String(bestScore));
+      safeSetHighScore(bestScore);
     }
     finalScoreEl.textContent = "Score: " + score;
     bestMsgEl.textContent = "Best: " + bestScore;
