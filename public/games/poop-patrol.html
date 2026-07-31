@@ -253,7 +253,16 @@
   var playerImgReady = false;
   playerImg.onload = function(){ playerImgReady = true; };
   playerImg.src = "player.png";
+
   var DOG_EMOJI = ["🐶", "🐩", "🦮"];
+  var DOG_IMAGE_SRCS = ["dog1.png", "dog2.png", "dog3.png"];
+  var dogImages = DOG_IMAGE_SRCS.map(function(src){
+    var img = new Image();
+    img.ready = false;
+    img.onload = function(){ img.ready = true; };
+    img.src = src;
+    return img;
+  });
 
   var HEDGE_TILE_H = 150;
   var FLOWER_COLORS = ["#f2a6c9", "#e8a33d", "#f4efe3", "#c79fe0"];
@@ -297,6 +306,7 @@
       dogs.push({
         laneX: (i + 0.5) / DOG_EMOJI.length * W,
         emoji: DOG_EMOJI[i],
+        img: dogImages[i],
         wigglePhase: Math.random() * Math.PI * 2,
         wiggleSpeed: 1.4 + Math.random() * 0.6,
         squash: 0
@@ -634,15 +644,21 @@
       ctx.save();
       ctx.translate(d.laneX + wig, DOG_ROW_H * 0.58);
       ctx.scale(squashX, squashY);
-      // backing disc for contrast -- these are still plain emoji (no custom
-      // art yet, unlike the poop/player), and some platforms render dog
-      // emoji in pale, washed-out tones that blend into the dog row's green
+      // backing disc for contrast -- keeps every dog (including the black
+      // poodle, which would otherwise sit dark-on-dark against the green
+      // dog row) framed clearly regardless of the art's own colours
       ctx.fillStyle = "rgba(244,239,227,0.92)";
       ctx.beginPath();
       ctx.arc(0, 2, 21, 0, Math.PI * 2);
       ctx.fill();
-      ctx.font = "34px " + EMOJI_FONT;
-      ctx.fillText(d.emoji, 0, 0);
+      if (d.img && d.img.ready){
+        var dogDrawH = 36;
+        var dogDrawW = dogDrawH * (d.img.naturalWidth / d.img.naturalHeight);
+        ctx.drawImage(d.img, -dogDrawW / 2, -dogDrawH / 2 + 2, dogDrawW, dogDrawH);
+      } else {
+        ctx.font = "34px " + EMOJI_FONT;
+        ctx.fillText(d.emoji, 0, 0);
+      }
       ctx.restore();
     }
 
