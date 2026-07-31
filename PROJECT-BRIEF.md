@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 29 Jul 2026 (App.jsx APP_VERSION 1.12.1)
+**Last updated:** 31 Jul 2026 (App.jsx APP_VERSION 1.13.0)
 
 ## Who you're talking to
 
@@ -116,6 +116,85 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
+- **v1.13.0 (draft):** Added a second small game, "Poop Patrol", reachable
+  from More → Extras alongside Whack-a-Squirrel. Same pattern as that
+  game: a standalone, self-contained HTML/CSS/JS file (canvas-based, no
+  build step, no external deps besides Google Fonts — deliberately no
+  embedded images this time, just emoji, to keep the file small) at
+  `public/games/poop-patrol.html`, shown full-screen in an iframe
+  (`PoopPatrolScreen`) rather than integrated as a React component. Three
+  dogs walk along a band at the top of the canvas; at random intervals
+  one of them "poops," dropping a 💩 that scrolls down a path toward the
+  bottom at an increasing speed. The player (🧑, free-roaming, not
+  lane-locked) is steered with a floating virtual joystick — press and
+  drag anywhere on the canvas to move, release to stop — implemented
+  with Pointer Events (covers touch and mouse) rather than raw touch
+  events, so it's also mouse-drivable for desktop testing. Running over
+  a poop scores 1 point (5 for a rarer golden/sparkly poop, ~13% spawn
+  chance) with a small particle-burst-and-floating-score-text animation;
+  letting one scroll off the bottom of the screen costs one of 3 lives
+  (screen-shake + "Missed!" feedback), and losing all 3 ends the run
+  with a game-over card showing score vs. best. Best score persists via
+  `localStorage` (`poop-patrol-highscore` key), matching how
+  Whack-a-Squirrel's high score is stored. Logs a `game_play` usage
+  event (label `"Poop Patrol"`) the same way Whack-a-Squirrel's link
+  does, shown as its own "Poop Patrol plays" stat card in Admin → Stats.
+  No schema/Supabase changes. **This is a first draft, not yet deployed
+  to the live site at Andy's request** — he's testing it as a standalone
+  file first, before it goes anywhere near hub.treetops.co.uk.
+  - **Bug found & fixed while Andy was testing (31 Jul 2026):** opening
+    the standalone game file directly (`file://`, e.g. tapping it from
+    Messages/Files on an iPhone) threw a `SecurityError` on
+    `localStorage` access — some browsers, iOS Safari especially, block
+    storage APIs for local files. That error happened at top-level
+    script execution, before the Start/Restart button listeners got
+    attached, so the button rendered but silently did nothing on tap.
+    Fixed by wrapping the high-score read/write in a
+    `safeGetHighScore()`/`safeSetHighScore()` helper — a blocked storage
+    API now just means the best score won't persist, instead of
+    breaking the whole game.
+  - **Balance/visual pass after Andy's first playthrough on a laptop
+    (31 Jul 2026):** reduced from 5 dogs to 3; slowed the poop's base
+    scroll speed and difficulty ramp (was 80→190px/s, now 55→130px/s)
+    since it scrolled off faster than a player could reasonably react;
+    sped up the player's top speed (260→340px/s) and joystick
+    responsiveness, since it felt sluggish by comparison. Also fixed
+    poop/player looking "semi-transparent" on Andy's machine (Edge on
+    Windows) — likely Segoe UI Emoji's flatter, paler art blending into
+    the sandy path colour rather than an actual alpha bug. Gave both a
+    solid cream backing disc so they read clearly against the path
+    regardless of a platform's emoji art style, and switched from a
+    generic `serif` font-family to an explicit emoji font stack
+    (`Segoe UI Emoji`/`Noto Color Emoji`/`Apple Color Emoji`) for more
+    reliable glyph selection.
+  - **Flowering hedges + scroll-speed bug (31 Jul 2026):** added a
+    procedurally drawn hedge strip (leafy blobs, occasional pink/gold/
+    cream/purple flower) along both edges of the path, on Andy's
+    request, to tie the visuals to an actual park path rather than a
+    generic road — no image assets, pure canvas drawing. In the same
+    pass, found and fixed the hedge/centre-dash scroll position being
+    advanced by a flat `scrollSpeed * 0.4` every rendered frame instead
+    of by real elapsed time — on a fast display that's ~24x the
+    intended speed, which is why Andy saw the hedges flash past too
+    fast to see. Moved both into the dt-based tick() loop so they now
+    scroll at the same real-world pace as the poop itself.
+  - **Custom artwork (31 Jul 2026):** Andy commissioned a poop
+    character and a groundskeeper-with-scoop player character, pushed
+    them to `main` as `POOP.png`/`Player.png` (merged into this branch
+    from there — worth noting for next time: he doesn't have a way to
+    hand over files directly in chat, so GitHub is the handoff point).
+    Both had flat opaque backgrounds and a generator watermark;
+    processed via a border-connected flood-fill keyed to the sampled
+    background colour (with a per-image tuned threshold — the player's
+    baked-in foot shadow was close enough in colour to its yellow
+    background that a naive threshold left it as a floating blob),
+    cropped to content, downsized from 1331px to ~300px, and renamed to
+    lowercase `poop.png`/`player.png` (GitHub Pages is case-sensitive).
+    Wired into the canvas via `drawImage`, with the old emoji
+    fallback kept in case the images fail to load. The plain white
+    backing discs added for emoji contrast are no longer needed now
+    that the real artwork's own outline strokes provide contrast on
+    their own.
 - **v1.12.1:** Fixed Admin → Info's reorder buttons — they rendered but
   did nothing, since `AdminInfo`'s render loop never passed
   `onMoveUp`/`onMoveDown`/`disableUp`/`disableDown` to `AdminListItem`

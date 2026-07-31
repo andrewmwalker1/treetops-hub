@@ -30,8 +30,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin PIN is verified server-side (see verifyAdminPin below) — it is
 // no longer stored or compared in the browser.
-const APP_VERSION = "1.12.1";
-const BUILD_DATE = "29 Jul 2026";
+const APP_VERSION = "1.13.0";
+const BUILD_DATE = "31 Jul 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -1294,6 +1294,15 @@ function MoreScreen({ onAdminTap, info, settings, go }) {
           <p style={{ margin: "3px 0 0", fontSize: 13, color: C.bark, lineHeight: 1.45 }}>A little game for while you wait</p>
         </div>
       </button>
+      <button onClick={() => { logEvent("game_play", "Poop Patrol"); go("poop-patrol"); }} style={{ ...card, display: "flex", gap: 14, marginBottom: 10, width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: C.sandDeep, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 19 }}>
+          💩
+        </div>
+        <div>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>Poop Patrol</p>
+          <p style={{ margin: "3px 0 0", fontSize: 13, color: C.bark, lineHeight: 1.45 }}>Keep the path clear — drag your thumb to steer</p>
+        </div>
+      </button>
 
       <SectionLabel style={{ marginTop: 22 }}>About</SectionLabel>
       <div style={card}>
@@ -1324,6 +1333,22 @@ function WhackASquirrelScreen({ onBack }) {
       <iframe
         src="/games/whack-a-squirrel.html"
         title="Whack-a-Squirrel"
+        style={{ flex: 1, width: "100%", border: "none" }}
+      />
+    </div>
+  );
+}
+
+function PoopPatrolScreen({ onBack }) {
+  return (
+    <div style={{ position: "absolute", inset: 0, background: "#12251c", zIndex: 50, display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "18px 20px 10px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+        <button onClick={onBack} style={backBtn}><ChevronLeft size={20} color={C.ink} /></button>
+        <h2 style={{ fontFamily: displayFont, fontSize: 19, color: C.white, margin: 0 }}>Poop Patrol</h2>
+      </div>
+      <iframe
+        src="/games/poop-patrol.html"
+        title="Poop Patrol"
         style={{ flex: 1, width: "100%", border: "none" }}
       />
     </div>
@@ -2677,6 +2702,7 @@ function AdminStats() {
   const websites = rankEvents(events, ["directory_website", "contractor_website"]);
   const forms = rankEvents(events, ["form_launch"]);
   const gamePlays = events.filter((e) => e.type === "game_play" && e.label === "Whack-a-Squirrel").length;
+  const poopPatrolPlays = events.filter((e) => e.type === "game_play" && e.label === "Poop Patrol").length;
 
   return (
     <div>
@@ -2695,9 +2721,13 @@ function AdminStats() {
         <StatCard icon={Bell} label="Notification subscribers" value={stats.push_subscribers} />
       </div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
         <StatCard icon={Bell} label="Of active devices, notifications on" value={`${notifOptInPct}%`} />
         <StatCard icon={Star} label="Whack-a-Squirrel plays" value={gamePlays} />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+        <StatCard icon={Star} label="Poop Patrol plays" value={poopPatrolPlays} />
       </div>
 
       <SectionLabel>Opens per day</SectionLabel>
@@ -2942,6 +2972,7 @@ export default function TreeTopsHubApp() {
   else if (tab === "contractors") content = <ContractorsScreen contractors={contractors} categories={contractorCategories} />;
   else if (tab === "emergency") content = <EmergencyContactsScreen contacts={emergencyContacts} contractors={contractors} contractorCategories={contractorCategories} onBack={() => go("home")} />;
   else if (tab === "whack-a-squirrel") content = <WhackASquirrelScreen onBack={() => go("more")} />;
+  else if (tab === "poop-patrol") content = <PoopPatrolScreen onBack={() => go("more")} />;
   else content = <MoreScreen onAdminTap={() => setAdminMode("gate")} info={info} settings={settings} go={go} />;
 
   return frame(

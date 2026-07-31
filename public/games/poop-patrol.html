@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Poop Patrol</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canopy-dark:#1b3b2f;
+    --canopy:#254f3d;
+    --bark:#4a2f23;
+    --bark-dark:#3a2419;
+    --amber:#e8a33d;
+    --cream:#f4efe3;
+    --danger:#c1443b;
+    --path:#c9a06b;
+    --path-dark:#a97f4c;
+    --grass:#2f6a48;
+    --grass-dark:#255536;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;
+    height:100%;
+    overflow:hidden;
+    background:var(--canopy-dark);
+    font-family:'Nunito',sans-serif;
+    color:var(--cream);
+    touch-action:none;
+    overscroll-behavior:none;
+  }
+  #stage{
+    position:fixed;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .hud{
+    flex-shrink:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(0,0,0,0.32);
+    padding:8px 16px;
+    font-family:'Baloo 2',cursive;
+    border-bottom:2px solid rgba(232,163,61,0.35);
+    z-index:5;
+  }
+  .hud div{text-align:center;}
+  .hud .label{
+    display:block;
+    font-family:'Nunito',sans-serif;
+    font-size:0.6rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    opacity:0.65;
+    margin-bottom:1px;
+  }
+  .hud .value{font-size:1.3rem;}
+  #lives-val{color:var(--danger); letter-spacing:1px;}
+  #best-val{color:#9fd8b8;}
+  #score-val{color:var(--amber);}
+  #canvas-wrap{
+    position:relative;
+    flex:1;
+    min-height:0;
+  }
+  canvas{
+    position:absolute;
+    inset:0;
+    display:block;
+    width:100%;
+    height:100%;
+  }
+  .joystick-base{
+    position:absolute;
+    width:96px;
+    height:96px;
+    margin-left:-48px;
+    margin-top:-48px;
+    border-radius:50%;
+    background:rgba(244,239,227,0.12);
+    border:2px solid rgba(244,239,227,0.35);
+    pointer-events:none;
+    display:none;
+    z-index:6;
+  }
+  .joystick-knob{
+    position:absolute;
+    width:44px;
+    height:44px;
+    margin-left:-22px;
+    margin-top:-22px;
+    border-radius:50%;
+    background:rgba(232,163,61,0.85);
+    border:2px solid rgba(244,239,227,0.6);
+    pointer-events:none;
+    display:none;
+    z-index:7;
+  }
+  .overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(10,20,15,0.88);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .overlay.hidden{display:none;}
+  .card{
+    background:var(--canopy);
+    border:3px solid var(--amber);
+    border-radius:22px;
+    padding:28px 26px;
+    text-align:center;
+    max-width:340px;
+  }
+  .card h2{
+    font-family:'Baloo 2',cursive;
+    font-size:1.7rem;
+    color:var(--amber);
+    margin:0 0 6px;
+    text-shadow:0 2px 0 var(--bark-dark);
+  }
+  .card p{font-size:0.88rem; opacity:0.85; line-height:1.5; margin:6px 0;}
+  .card .big{font-size:1.4rem; font-weight:800; color:var(--cream); font-family:'Baloo 2',cursive;}
+  button.main-btn{
+    font-family:'Baloo 2',cursive;
+    font-size:1.05rem;
+    font-weight:700;
+    background:linear-gradient(180deg, var(--amber), #c9822a);
+    color:#2a1810;
+    border:none;
+    padding:12px 32px;
+    border-radius:14px;
+    cursor:pointer;
+    box-shadow:0 4px 0 #a56a1f;
+    margin-top:14px;
+  }
+  button.main-btn:active{
+    transform:translateY(3px);
+    box-shadow:0 1px 0 #a56a1f;
+  }
+  .legend{
+    display:flex;
+    justify-content:center;
+    gap:14px;
+    margin-top:14px;
+    font-size:0.76rem;
+    opacity:0.85;
+    flex-wrap:wrap;
+  }
+  .legend span{display:flex; align-items:center; gap:4px;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="hud">
+    <div><span class="label">Score</span><span class="value" id="score-val">0</span></div>
+    <div><span class="label">Lives</span><span class="value" id="lives-val">❤️❤️❤️</span></div>
+    <div><span class="label">Best</span><span class="value" id="best-val">0</span></div>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="game"></canvas>
+    <div class="joystick-base" id="joy-base"></div>
+    <div class="joystick-knob" id="joy-knob"></div>
+  </div>
+
+  <div class="overlay" id="start-overlay">
+    <div class="card">
+      <h2>💩 Poop Patrol</h2>
+      <p>Three dogs, one path — keep it clear before it scrolls away!</p>
+      <p>Drag your thumb anywhere to steer. Run over poop to scoop it before it reaches the bottom.</p>
+      <div class="legend">
+        <span>💩 = 1pt</span>
+        <span>✨💩 = 5pts</span>
+        <span>❤️ = 3 misses allowed</span>
+      </div>
+      <button class="main-btn" id="start-btn">Start patrol</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="card">
+      <h2>Path's a mess!</h2>
+      <p class="big" id="final-score">Score: 0</p>
+      <p id="best-msg">Best: 0</p>
+      <button class="main-btn" id="restart-btn">Patrol again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var HIGH_SCORE_KEY = "poop-patrol-highscore";
+
+  function safeGetHighScore(){
+    try { return parseInt(localStorage.getItem(HIGH_SCORE_KEY) || "0", 10) || 0; }
+    catch (err) { return 0; }
+  }
+  function safeSetHighScore(value){
+    try { localStorage.setItem(HIGH_SCORE_KEY, String(value)); }
+    catch (err) { /* localStorage unavailable (e.g. file:// origin) — best score just won't persist */ }
+  }
+
+  var canvas = document.getElementById("game");
+  var ctx = canvas.getContext("2d");
+  var wrap = document.getElementById("canvas-wrap");
+  var joyBase = document.getElementById("joy-base");
+  var joyKnob = document.getElementById("joy-knob");
+  var scoreEl = document.getElementById("score-val");
+  var livesEl = document.getElementById("lives-val");
+  var bestEl = document.getElementById("best-val");
+  var startOverlay = document.getElementById("start-overlay");
+  var gameoverOverlay = document.getElementById("gameover-overlay");
+  var finalScoreEl = document.getElementById("final-score");
+  var bestMsgEl = document.getElementById("best-msg");
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var W = 0, H = 0;
+  var DOG_ROW_H = 92;
+
+  function resize(){
+    var rect = wrap.getBoundingClientRect();
+    W = rect.width;
+    H = rect.height;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    DOG_ROW_H = Math.max(74, Math.min(100, H * 0.14));
+  }
+  window.addEventListener("resize", resize);
+  window.addEventListener("orientationchange", function(){ setTimeout(resize, 50); });
+
+  var bestScore = safeGetHighScore();
+  bestEl.textContent = bestScore;
+
+  var EMOJI_FONT = "'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif";
+
+  var poopImg = new Image();
+  var poopImgReady = false;
+  poopImg.onload = function(){ poopImgReady = true; };
+  poopImg.src = "poop.png";
+
+  var playerImg = new Image();
+  var playerImgReady = false;
+  playerImg.onload = function(){ playerImgReady = true; };
+  playerImg.src = "player.png";
+
+  var DOG_EMOJI = ["🐶", "🐩", "🦮"];
+  var DOG_IMAGE_SRCS = ["dog1.png", "dog2.png", "dog3.png"];
+  var dogImages = DOG_IMAGE_SRCS.map(function(src){
+    var img = new Image();
+    img.ready = false;
+    img.onload = function(){ img.ready = true; };
+    img.src = src;
+    return img;
+  });
+
+  var HEDGE_TILE_H = 150;
+  var FLOWER_COLORS = ["#f2a6c9", "#e8a33d", "#f4efe3", "#c79fe0"];
+  function makeHedgeFeatures(){
+    var arr = [];
+    for (var i = 0; i < 9; i++){
+      var isFlower = Math.random() < 0.3;
+      arr.push({
+        y: (i / 9) * HEDGE_TILE_H + Math.random() * 10,
+        x: 0.2 + Math.random() * 0.6,
+        size: isFlower ? 3 + Math.random() * 2 : 5 + Math.random() * 5,
+        flower: isFlower,
+        color: isFlower ? FLOWER_COLORS[Math.floor(Math.random() * FLOWER_COLORS.length)] : null
+      });
+    }
+    return arr;
+  }
+  var hedgeFeaturesLeft = makeHedgeFeatures();
+  var hedgeFeaturesRight = makeHedgeFeatures();
+  var hedgeOffset = 0;
+  var dogs = [];
+  var poops = [];
+  var particles = [];
+  var floats = [];
+
+  var player = { x: 0, y: 0, vx: 0, vy: 0, r: 22, facing: 1, bob: 0 };
+  var maxSpeed = 340; // px/sec
+
+  var state = "start"; // start | playing | gameover
+  var score = 0;
+  var lives = 3;
+  var elapsed = 0;
+  var spawnTimer = 0;
+  var spawnInterval = 1.8;
+  var scrollSpeed = 55;
+  var shake = 0;
+
+  function resetGame(){
+    dogs = [];
+    for (var i = 0; i < DOG_EMOJI.length; i++){
+      dogs.push({
+        laneX: (i + 0.5) / DOG_EMOJI.length * W,
+        emoji: DOG_EMOJI[i],
+        img: dogImages[i],
+        wigglePhase: Math.random() * Math.PI * 2,
+        wiggleSpeed: 1.4 + Math.random() * 0.6,
+        squash: 0
+      });
+    }
+    poops = [];
+    particles = [];
+    floats = [];
+    player.x = W / 2;
+    player.y = H - 90;
+    player.vx = 0;
+    player.vy = 0;
+    score = 0;
+    lives = 3;
+    elapsed = 0;
+    spawnTimer = 0.6;
+    spawnInterval = 1.8;
+    scrollSpeed = 55;
+    shake = 0;
+    updateHud();
+  }
+
+  function updateHud(){
+    scoreEl.textContent = score;
+    livesEl.textContent = "❤️".repeat(Math.max(0, lives)) + "🖤".repeat(Math.max(0, 3 - lives));
+    bestEl.textContent = bestScore;
+  }
+
+  // ---- input: floating virtual joystick (pointer events cover touch + mouse) ----
+  var activePointerId = null;
+  var joyOrigin = { x: 0, y: 0 };
+  var joyVec = { x: 0, y: 0 }; // -1..1 each axis
+  var JOY_MAX_R = 48;
+
+  function pointerPos(e){
+    var rect = wrap.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  wrap.addEventListener("pointerdown", function(e){
+    if (state !== "playing") return;
+    if (activePointerId !== null) return;
+    activePointerId = e.pointerId;
+    var p = pointerPos(e);
+    joyOrigin.x = p.x;
+    joyOrigin.y = p.y;
+    joyVec.x = 0; joyVec.y = 0;
+    joyBase.style.left = p.x + "px";
+    joyBase.style.top = p.y + "px";
+    joyKnob.style.left = p.x + "px";
+    joyKnob.style.top = p.y + "px";
+    joyBase.style.display = "block";
+    joyKnob.style.display = "block";
+    try { wrap.setPointerCapture(e.pointerId); } catch(err){}
+  });
+
+  wrap.addEventListener("pointermove", function(e){
+    if (e.pointerId !== activePointerId) return;
+    var p = pointerPos(e);
+    var dx = p.x - joyOrigin.x;
+    var dy = p.y - joyOrigin.y;
+    var dist = Math.sqrt(dx * dx + dy * dy);
+    var clamped = Math.min(dist, JOY_MAX_R);
+    var angle = Math.atan2(dy, dx);
+    var kx = joyOrigin.x + Math.cos(angle) * clamped;
+    var ky = joyOrigin.y + Math.sin(angle) * clamped;
+    joyKnob.style.left = kx + "px";
+    joyKnob.style.top = ky + "px";
+    var mag = clamped / JOY_MAX_R;
+    joyVec.x = Math.cos(angle) * mag;
+    joyVec.y = Math.sin(angle) * mag;
+  });
+
+  function endPointer(e){
+    if (e.pointerId !== activePointerId) return;
+    activePointerId = null;
+    joyVec.x = 0; joyVec.y = 0;
+    joyBase.style.display = "none";
+    joyKnob.style.display = "none";
+  }
+  wrap.addEventListener("pointerup", endPointer);
+  wrap.addEventListener("pointercancel", endPointer);
+
+  // ---- spawning ----
+  function spawnPoop(){
+    var count = poops.filter(function(p){ return !p.collected; }).length;
+    if (count >= 6) return;
+    var dog = dogs[Math.floor(Math.random() * dogs.length)];
+    dog.squash = 1;
+    var golden = Math.random() < 0.13;
+    poops.push({
+      x: dog.laneX,
+      y: DOG_ROW_H + 6,
+      r: golden ? 17 : 15,
+      golden: golden,
+      collected: false,
+      scale: 0,
+      sparklePhase: Math.random() * Math.PI * 2
+    });
+  }
+
+  function addFloat(x, y, text, color){
+    floats.push({ x: x, y: y, text: text, color: color, life: 0.8, t: 0 });
+  }
+
+  function addBurst(x, y, golden){
+    var n = golden ? 10 : 6;
+    for (var i = 0; i < n; i++){
+      var a = (Math.PI * 2 * i) / n + Math.random() * 0.3;
+      var speed = 60 + Math.random() * 80;
+      particles.push({
+        x: x, y: y,
+        vx: Math.cos(a) * speed,
+        vy: Math.sin(a) * speed,
+        life: 0.5,
+        t: 0,
+        emoji: golden ? "✨" : "💫",
+        size: golden ? 14 : 11
+      });
+    }
+  }
+
+  function collectPoop(p){
+    p.collected = true;
+    var pts = p.golden ? 5 : 1;
+    score += pts;
+    addFloat(p.x, p.y, "+" + pts, p.golden ? "#ffd873" : "#dff5e6");
+    addBurst(p.x, p.y, p.golden);
+    updateHud();
+  }
+
+  function missPoop(p){
+    p.collected = true;
+    lives -= 1;
+    shake = 0.25;
+    addFloat(p.x, H - 30, "Missed!", "#ff9d90");
+    updateHud();
+    if (lives <= 0){
+      endGame();
+    }
+  }
+
+  function endGame(){
+    state = "gameover";
+    if (score > bestScore){
+      bestScore = score;
+      safeSetHighScore(bestScore);
+    }
+    finalScoreEl.textContent = "Score: " + score;
+    bestMsgEl.textContent = "Best: " + bestScore;
+    gameoverOverlay.classList.remove("hidden");
+    joyBase.style.display = "none";
+    joyKnob.style.display = "none";
+  }
+
+  // ---- update ----
+  var lastTs = null;
+  function tick(ts){
+    if (lastTs === null) lastTs = ts;
+    var dt = Math.min(0.05, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    if (state === "playing"){
+      elapsed += dt;
+      spawnInterval = Math.max(0.7, 1.8 - elapsed * 0.02);
+      scrollSpeed = Math.min(130, 55 + elapsed * 1.8);
+
+      spawnTimer -= dt;
+      if (spawnTimer <= 0){
+        spawnPoop();
+        spawnTimer = spawnInterval * (0.75 + Math.random() * 0.5);
+      }
+
+      // player movement
+      var targetVx = joyVec.x * maxSpeed;
+      var targetVy = joyVec.y * maxSpeed;
+      player.vx += (targetVx - player.vx) * Math.min(1, dt * 14);
+      player.vy += (targetVy - player.vy) * Math.min(1, dt * 14);
+      player.x += player.vx * dt;
+      player.y += player.vy * dt;
+
+      var minY = DOG_ROW_H + player.r + 10;
+      var maxY = H - player.r - 6;
+      player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+      player.y = Math.max(minY, Math.min(maxY, player.y));
+
+      if (Math.abs(player.vx) > 8) player.facing = player.vx > 0 ? 1 : -1;
+      player.bob += dt * (4 + Math.hypot(player.vx, player.vy) * 0.02);
+
+      // dogs
+      for (var i = 0; i < dogs.length; i++){
+        var d = dogs[i];
+        d.wigglePhase += dt * d.wiggleSpeed;
+        if (d.squash > 0) d.squash = Math.max(0, d.squash - dt * 4);
+      }
+
+      // scrolling scenery -- driven by real elapsed time, not frame count,
+      // so it always matches how fast the poop itself is actually falling
+      roadOffset = (roadOffset + scrollSpeed * dt) % 48;
+      hedgeOffset = (hedgeOffset + scrollSpeed * dt) % HEDGE_TILE_H;
+
+      // poops
+      for (var j = poops.length - 1; j >= 0; j--){
+        var p = poops[j];
+        if (p.collected) continue;
+        p.scale = Math.min(1, p.scale + dt * 8);
+        p.y += scrollSpeed * dt;
+        p.sparklePhase += dt * 5;
+
+        var dx2 = p.x - player.x;
+        var dy2 = p.y - player.y;
+        var dist2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        if (dist2 < p.r + player.r * 0.75){
+          collectPoop(p);
+          continue;
+        }
+        if (p.y - p.r > H){
+          missPoop(p);
+        }
+      }
+      poops = poops.filter(function(p){ return !p.collected; });
+
+      // particles
+      for (var k = particles.length - 1; k >= 0; k--){
+        var pt = particles[k];
+        pt.t += dt;
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.vx *= 0.94;
+        pt.vy *= 0.94;
+        if (pt.t >= pt.life) particles.splice(k, 1);
+      }
+      for (var f = floats.length - 1; f >= 0; f--){
+        floats[f].t += dt;
+        if (floats[f].t >= floats[f].life) floats.splice(f, 1);
+      }
+
+      if (shake > 0) shake = Math.max(0, shake - dt);
+    }
+
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  var roadOffset = 0;
+
+  function drawHedgeStrip(x, w, features){
+    ctx.fillStyle = "#2a5a3c";
+    ctx.fillRect(x, DOG_ROW_H, w, H - DOG_ROW_H);
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fillRect(x, DOG_ROW_H, 3, H - DOG_ROW_H);
+
+    var startY = DOG_ROW_H - (hedgeOffset % HEDGE_TILE_H) - HEDGE_TILE_H;
+    for (var ty = startY; ty < H + HEDGE_TILE_H; ty += HEDGE_TILE_H){
+      for (var i = 0; i < features.length; i++){
+        var f = features[i];
+        var fx = x + f.x * w;
+        var fy = ty + f.y;
+        if (fy < DOG_ROW_H - 12 || fy > H + 12) continue;
+        if (f.flower){
+          ctx.fillStyle = f.color;
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#5a3a1a";
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.size * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "rgba(0,0,0,0.16)";
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+
+    var sx = 0, sy = 0;
+    if (shake > 0){
+      sx = (Math.random() - 0.5) * 10 * shake;
+      sy = (Math.random() - 0.5) * 10 * shake;
+    }
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.translate(sx, sy);
+
+    // grass background
+    ctx.fillStyle = "#1e4530";
+    ctx.fillRect(0, 0, W, H);
+
+    // path (scrolling)
+    var pathW = Math.min(W * 0.9, 420);
+    var pathX = (W - pathW) / 2;
+    var grad = ctx.createLinearGradient(pathX, 0, pathX + pathW, 0);
+    grad.addColorStop(0, "#a97f4c");
+    grad.addColorStop(0.5, "#c9a06b");
+    grad.addColorStop(1, "#a97f4c");
+    ctx.fillStyle = grad;
+    ctx.fillRect(pathX, DOG_ROW_H, pathW, H - DOG_ROW_H);
+
+    // hedges along both edges of the path, with the occasional flower
+    var hedgeW = Math.max(10, Math.min(24, pathX - 4));
+    drawHedgeStrip(pathX - hedgeW, hedgeW, hedgeFeaturesLeft);
+    drawHedgeStrip(pathX + pathW, hedgeW, hedgeFeaturesRight);
+
+    // scrolling dashes down the path center
+    ctx.strokeStyle = "rgba(244,239,227,0.35)";
+    ctx.lineWidth = 4;
+    ctx.setLineDash([18, 26]);
+    ctx.lineDashOffset = -roadOffset;
+    ctx.beginPath();
+    ctx.moveTo(W / 2, DOG_ROW_H);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // dog row band
+    ctx.fillStyle = "#3d6b4c";
+    ctx.fillRect(0, 0, W, DOG_ROW_H);
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(0, DOG_ROW_H - 6, W, 6);
+
+    // dogs
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (var i = 0; i < dogs.length; i++){
+      var d = dogs[i];
+      var wig = Math.sin(d.wigglePhase) * 5;
+      var squashY = 1 - d.squash * 0.35;
+      var squashX = 1 + d.squash * 0.35;
+      ctx.save();
+      ctx.translate(d.laneX + wig, DOG_ROW_H * 0.58);
+      ctx.scale(squashX, squashY);
+      if (d.img && d.img.ready){
+        var dogDrawH = 36;
+        var dogDrawW = dogDrawH * (d.img.naturalWidth / d.img.naturalHeight);
+        ctx.drawImage(d.img, -dogDrawW / 2, -dogDrawH / 2 + 2, dogDrawW, dogDrawH);
+      } else {
+        ctx.font = "34px " + EMOJI_FONT;
+        ctx.fillText(d.emoji, 0, 0);
+      }
+      ctx.restore();
+    }
+
+    // poops
+    for (var j = 0; j < poops.length; j++){
+      var p = poops[j];
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(p.scale, p.scale);
+      if (p.golden){
+        var glowR = p.r * 2.4 + Math.sin(p.sparklePhase) * 3;
+        var rg = ctx.createRadialGradient(0, 0, 2, 0, 0, glowR);
+        rg.addColorStop(0, "rgba(255,216,115,0.65)");
+        rg.addColorStop(1, "rgba(255,216,115,0)");
+        ctx.fillStyle = rg;
+        ctx.beginPath();
+        ctx.arc(0, 0, glowR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (poopImgReady){
+        var poopDrawH = p.r * 2.3;
+        var poopDrawW = poopDrawH * (poopImg.naturalWidth / poopImg.naturalHeight);
+        ctx.drawImage(poopImg, -poopDrawW / 2, -poopDrawH / 2 + 2, poopDrawW, poopDrawH);
+      } else {
+        ctx.font = (p.r * 1.9) + "px " + EMOJI_FONT;
+        ctx.fillText("💩", 0, 2);
+      }
+      if (p.golden){
+        ctx.font = (p.r * 1.1) + "px " + EMOJI_FONT;
+        ctx.fillText("✨", p.r * 1.1, -p.r * 1.1 + Math.sin(p.sparklePhase) * 3);
+        ctx.fillText("✨", -p.r * 1.1, p.r * 0.6 + Math.cos(p.sparklePhase) * 3);
+      }
+      ctx.restore();
+    }
+
+    // player
+    ctx.save();
+    var bobY = Math.sin(player.bob) * 3;
+    ctx.translate(player.x, player.y + bobY);
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.beginPath();
+    ctx.ellipse(0, player.r * 0.85, player.r * 0.7, player.r * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.scale(player.facing, 1);
+    if (playerImgReady){
+      var playerDrawH = player.r * 2.7;
+      var playerDrawW = playerDrawH * (playerImg.naturalWidth / playerImg.naturalHeight);
+      ctx.drawImage(playerImg, -playerDrawW / 2, player.r * 0.9 - playerDrawH, playerDrawW, playerDrawH);
+    } else {
+      ctx.font = (player.r * 2.1) + "px " + EMOJI_FONT;
+      ctx.fillText("🧑", 0, 0);
+    }
+    ctx.restore();
+
+    // particles
+    for (var k = 0; k < particles.length; k++){
+      var pt = particles[k];
+      var alpha = 1 - pt.t / pt.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, alpha);
+      ctx.font = pt.size + "px " + EMOJI_FONT;
+      ctx.fillText(pt.emoji, pt.x, pt.y);
+      ctx.restore();
+    }
+
+    // floating score texts
+    ctx.font = "700 20px 'Baloo 2', cursive";
+    for (var f = 0; f < floats.length; f++){
+      var fl = floats[f];
+      var t = fl.t / fl.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - t);
+      ctx.fillStyle = fl.color;
+      ctx.fillText(fl.text, fl.x, fl.y - t * 34);
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  document.getElementById("start-btn").addEventListener("click", function(){
+    resize();
+    resetGame();
+    state = "playing";
+    startOverlay.classList.add("hidden");
+  });
+  document.getElementById("restart-btn").addEventListener("click", function(){
+    resize();
+    resetGame();
+    state = "playing";
+    gameoverOverlay.classList.add("hidden");
+  });
+
+  resize();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
