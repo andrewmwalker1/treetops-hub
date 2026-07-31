@@ -244,6 +244,26 @@
 
   var EMOJI_FONT = "'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif";
   var DOG_EMOJI = ["🐶", "🐩", "🦮"];
+
+  var HEDGE_TILE_H = 150;
+  var FLOWER_COLORS = ["#f2a6c9", "#e8a33d", "#f4efe3", "#c79fe0"];
+  function makeHedgeFeatures(){
+    var arr = [];
+    for (var i = 0; i < 9; i++){
+      var isFlower = Math.random() < 0.3;
+      arr.push({
+        y: (i / 9) * HEDGE_TILE_H + Math.random() * 10,
+        x: 0.2 + Math.random() * 0.6,
+        size: isFlower ? 3 + Math.random() * 2 : 5 + Math.random() * 5,
+        flower: isFlower,
+        color: isFlower ? FLOWER_COLORS[Math.floor(Math.random() * FLOWER_COLORS.length)] : null
+      });
+    }
+    return arr;
+  }
+  var hedgeFeaturesLeft = makeHedgeFeatures();
+  var hedgeFeaturesRight = makeHedgeFeatures();
+  var hedgeOffset = 0;
   var dogs = [];
   var poops = [];
   var particles = [];
@@ -508,6 +528,38 @@
 
   var roadOffset = 0;
 
+  function drawHedgeStrip(x, w, features){
+    ctx.fillStyle = "#2a5a3c";
+    ctx.fillRect(x, DOG_ROW_H, w, H - DOG_ROW_H);
+    ctx.fillStyle = "rgba(0,0,0,0.15)";
+    ctx.fillRect(x, DOG_ROW_H, 3, H - DOG_ROW_H);
+
+    var startY = DOG_ROW_H - (hedgeOffset % HEDGE_TILE_H) - HEDGE_TILE_H;
+    for (var ty = startY; ty < H + HEDGE_TILE_H; ty += HEDGE_TILE_H){
+      for (var i = 0; i < features.length; i++){
+        var f = features[i];
+        var fx = x + f.x * w;
+        var fy = ty + f.y;
+        if (fy < DOG_ROW_H - 12 || fy > H + 12) continue;
+        if (f.flower){
+          ctx.fillStyle = f.color;
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#5a3a1a";
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.size * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = "rgba(0,0,0,0.16)";
+          ctx.beginPath();
+          ctx.arc(fx, fy, f.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
   function draw(){
     ctx.clearRect(0, 0, W, H);
 
@@ -533,6 +585,12 @@
     grad.addColorStop(1, "#a97f4c");
     ctx.fillStyle = grad;
     ctx.fillRect(pathX, DOG_ROW_H, pathW, H - DOG_ROW_H);
+
+    // hedges along both edges of the path, with the occasional flower
+    if (state === "playing") hedgeOffset = (hedgeOffset + scrollSpeed * 0.4) % HEDGE_TILE_H;
+    var hedgeW = Math.max(10, Math.min(24, pathX - 4));
+    drawHedgeStrip(pathX - hedgeW, hedgeW, hedgeFeaturesLeft);
+    drawHedgeStrip(pathX + pathW, hedgeW, hedgeFeaturesRight);
 
     // scrolling dashes down the path center
     if (state === "playing") roadOffset = (roadOffset + scrollSpeed * 0.4) % 48;
