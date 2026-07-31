@@ -122,7 +122,7 @@ it — don't rebuild the theme from scratch.
   build step, no external deps besides Google Fonts — deliberately no
   embedded images this time, just emoji, to keep the file small) at
   `public/games/poop-patrol.html`, shown full-screen in an iframe
-  (`PoopPatrolScreen`) rather than integrated as a React component. Five
+  (`PoopPatrolScreen`) rather than integrated as a React component. Three
   dogs walk along a band at the top of the canvas; at random intervals
   one of them "poops," dropping a 💩 that scrolls down a path toward the
   bottom at an increasing speed. The player (🧑, free-roaming, not
@@ -139,10 +139,34 @@ it — don't rebuild the theme from scratch.
   Whack-a-Squirrel's high score is stored. Logs a `game_play` usage
   event (label `"Poop Patrol"`) the same way Whack-a-Squirrel's link
   does, shown as its own "Poop Patrol plays" stat card in Admin → Stats.
-  No schema/Supabase changes. **This is a first draft, not yet tested
-  on a real phone or reviewed by Andy** — the joystick feel, difficulty
-  ramp, and dog/poop sizing on a small screen are the main things worth
-  checking before calling it done.
+  No schema/Supabase changes. **This is a first draft, not yet deployed
+  to the live site at Andy's request** — he's testing it as a standalone
+  file first, before it goes anywhere near hub.treetops.co.uk.
+  - **Bug found & fixed while Andy was testing (31 Jul 2026):** opening
+    the standalone game file directly (`file://`, e.g. tapping it from
+    Messages/Files on an iPhone) threw a `SecurityError` on
+    `localStorage` access — some browsers, iOS Safari especially, block
+    storage APIs for local files. That error happened at top-level
+    script execution, before the Start/Restart button listeners got
+    attached, so the button rendered but silently did nothing on tap.
+    Fixed by wrapping the high-score read/write in a
+    `safeGetHighScore()`/`safeSetHighScore()` helper — a blocked storage
+    API now just means the best score won't persist, instead of
+    breaking the whole game.
+  - **Balance/visual pass after Andy's first playthrough on a laptop
+    (31 Jul 2026):** reduced from 5 dogs to 3; slowed the poop's base
+    scroll speed and difficulty ramp (was 80→190px/s, now 55→130px/s)
+    since it scrolled off faster than a player could reasonably react;
+    sped up the player's top speed (260→340px/s) and joystick
+    responsiveness, since it felt sluggish by comparison. Also fixed
+    poop/player looking "semi-transparent" on Andy's machine (Edge on
+    Windows) — likely Segoe UI Emoji's flatter, paler art blending into
+    the sandy path colour rather than an actual alpha bug. Gave both a
+    solid cream backing disc so they read clearly against the path
+    regardless of a platform's emoji art style, and switched from a
+    generic `serif` font-family to an explicit emoji font stack
+    (`Segoe UI Emoji`/`Noto Color Emoji`/`Apple Color Emoji`) for more
+    reliable glyph selection.
 - **v1.12.1:** Fixed Admin → Info's reorder buttons — they rendered but
   did nothing, since `AdminInfo`'s render loop never passed
   `onMoveUp`/`onMoveDown`/`disableUp`/`disableDown` to `AdminListItem`

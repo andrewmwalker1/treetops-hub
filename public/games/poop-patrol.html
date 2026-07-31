@@ -174,7 +174,7 @@
   <div class="overlay" id="start-overlay">
     <div class="card">
       <h2>💩 Poop Patrol</h2>
-      <p>Five dogs, one path — keep it clear before it scrolls away!</p>
+      <p>Three dogs, one path — keep it clear before it scrolls away!</p>
       <p>Drag your thumb anywhere to steer. Run over poop to scoop it before it reaches the bottom.</p>
       <div class="legend">
         <span>💩 = 1pt</span>
@@ -242,14 +242,15 @@
   var bestScore = safeGetHighScore();
   bestEl.textContent = bestScore;
 
-  var DOG_EMOJI = ["🐶", "🐕", "🐩", "🦮", "🐕‍🦺"];
+  var EMOJI_FONT = "'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif";
+  var DOG_EMOJI = ["🐶", "🐩", "🦮"];
   var dogs = [];
   var poops = [];
   var particles = [];
   var floats = [];
 
   var player = { x: 0, y: 0, vx: 0, vy: 0, r: 22, facing: 1, bob: 0 };
-  var maxSpeed = 260; // px/sec
+  var maxSpeed = 340; // px/sec
 
   var state = "start"; // start | playing | gameover
   var score = 0;
@@ -257,14 +258,14 @@
   var elapsed = 0;
   var spawnTimer = 0;
   var spawnInterval = 1.8;
-  var scrollSpeed = 80;
+  var scrollSpeed = 55;
   var shake = 0;
 
   function resetGame(){
     dogs = [];
-    for (var i = 0; i < 5; i++){
+    for (var i = 0; i < DOG_EMOJI.length; i++){
       dogs.push({
-        laneX: (i + 0.5) / 5 * W,
+        laneX: (i + 0.5) / DOG_EMOJI.length * W,
         emoji: DOG_EMOJI[i],
         wigglePhase: Math.random() * Math.PI * 2,
         wiggleSpeed: 1.4 + Math.random() * 0.6,
@@ -283,7 +284,7 @@
     elapsed = 0;
     spawnTimer = 0.6;
     spawnInterval = 1.8;
-    scrollSpeed = 80;
+    scrollSpeed = 55;
     shake = 0;
     updateHud();
   }
@@ -431,7 +432,7 @@
     if (state === "playing"){
       elapsed += dt;
       spawnInterval = Math.max(0.7, 1.8 - elapsed * 0.02);
-      scrollSpeed = Math.min(190, 80 + elapsed * 3.2);
+      scrollSpeed = Math.min(130, 55 + elapsed * 1.8);
 
       spawnTimer -= dt;
       if (spawnTimer <= 0){
@@ -442,8 +443,8 @@
       // player movement
       var targetVx = joyVec.x * maxSpeed;
       var targetVy = joyVec.y * maxSpeed;
-      player.vx += (targetVx - player.vx) * Math.min(1, dt * 10);
-      player.vy += (targetVy - player.vy) * Math.min(1, dt * 10);
+      player.vx += (targetVx - player.vx) * Math.min(1, dt * 14);
+      player.vy += (targetVy - player.vy) * Math.min(1, dt * 14);
       player.x += player.vx * dt;
       player.y += player.vy * dt;
 
@@ -516,6 +517,7 @@
       sy = (Math.random() - 0.5) * 10 * shake;
     }
     ctx.save();
+    ctx.globalAlpha = 1;
     ctx.translate(sx, sy);
 
     // grass background
@@ -561,7 +563,7 @@
       ctx.save();
       ctx.translate(d.laneX + wig, DOG_ROW_H * 0.58);
       ctx.scale(squashX, squashY);
-      ctx.font = "34px serif";
+      ctx.font = "34px " + EMOJI_FONT;
       ctx.fillText(d.emoji, 0, 0);
       ctx.restore();
     }
@@ -581,13 +583,21 @@
         ctx.beginPath();
         ctx.arc(0, 0, glowR, 0, Math.PI * 2);
         ctx.fill();
-        ctx.font = (p.r * 1.9) + "px serif";
+      }
+      // solid backing disc so the poop always reads clearly against the path,
+      // regardless of how light/flat a platform's emoji artwork is
+      ctx.fillStyle = "rgba(244,239,227,0.92)";
+      ctx.beginPath();
+      ctx.arc(0, 1, p.r * 1.08, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.golden){
+        ctx.font = (p.r * 1.9) + "px " + EMOJI_FONT;
         ctx.fillText("💩", 0, 2);
-        ctx.font = (p.r * 1.1) + "px serif";
+        ctx.font = (p.r * 1.1) + "px " + EMOJI_FONT;
         ctx.fillText("✨", p.r * 1.1, -p.r * 1.1 + Math.sin(p.sparklePhase) * 3);
         ctx.fillText("✨", -p.r * 1.1, p.r * 0.6 + Math.cos(p.sparklePhase) * 3);
       } else {
-        ctx.font = (p.r * 1.9) + "px serif";
+        ctx.font = (p.r * 1.9) + "px " + EMOJI_FONT;
         ctx.fillText("💩", 0, 2);
       }
       ctx.restore();
@@ -601,8 +611,14 @@
     ctx.beginPath();
     ctx.ellipse(0, player.r * 0.85, player.r * 0.7, player.r * 0.25, 0, 0, Math.PI * 2);
     ctx.fill();
+    // solid backing disc behind the player, same reasoning as the poop's --
+    // keeps them from ever blending into the path's colour
+    ctx.fillStyle = "rgba(244,239,227,0.92)";
+    ctx.beginPath();
+    ctx.arc(0, 0, player.r * 1.05, 0, Math.PI * 2);
+    ctx.fill();
     ctx.scale(player.facing, 1);
-    ctx.font = (player.r * 2.1) + "px serif";
+    ctx.font = (player.r * 2.1) + "px " + EMOJI_FONT;
     ctx.fillText("🧑", 0, 0);
     ctx.restore();
 
@@ -612,7 +628,7 @@
       var alpha = 1 - pt.t / pt.life;
       ctx.save();
       ctx.globalAlpha = Math.max(0, alpha);
-      ctx.font = pt.size + "px serif";
+      ctx.font = pt.size + "px " + EMOJI_FONT;
       ctx.fillText(pt.emoji, pt.x, pt.y);
       ctx.restore();
     }
