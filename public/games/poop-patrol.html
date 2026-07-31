@@ -483,6 +483,11 @@
         if (d.squash > 0) d.squash = Math.max(0, d.squash - dt * 4);
       }
 
+      // scrolling scenery -- driven by real elapsed time, not frame count,
+      // so it always matches how fast the poop itself is actually falling
+      roadOffset = (roadOffset + scrollSpeed * dt) % 48;
+      hedgeOffset = (hedgeOffset + scrollSpeed * dt) % HEDGE_TILE_H;
+
       // poops
       for (var j = poops.length - 1; j >= 0; j--){
         var p = poops[j];
@@ -587,13 +592,11 @@
     ctx.fillRect(pathX, DOG_ROW_H, pathW, H - DOG_ROW_H);
 
     // hedges along both edges of the path, with the occasional flower
-    if (state === "playing") hedgeOffset = (hedgeOffset + scrollSpeed * 0.4) % HEDGE_TILE_H;
     var hedgeW = Math.max(10, Math.min(24, pathX - 4));
     drawHedgeStrip(pathX - hedgeW, hedgeW, hedgeFeaturesLeft);
     drawHedgeStrip(pathX + pathW, hedgeW, hedgeFeaturesRight);
 
     // scrolling dashes down the path center
-    if (state === "playing") roadOffset = (roadOffset + scrollSpeed * 0.4) % 48;
     ctx.strokeStyle = "rgba(244,239,227,0.35)";
     ctx.lineWidth = 4;
     ctx.setLineDash([18, 26]);
