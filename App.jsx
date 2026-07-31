@@ -1294,12 +1294,12 @@ function MoreScreen({ onAdminTap, info, settings, go }) {
           <p style={{ margin: "3px 0 0", fontSize: 13, color: C.bark, lineHeight: 1.45 }}>A little game for while you wait</p>
         </div>
       </button>
-      <button onClick={() => { logEvent("game_play", "Poop Patrol"); go("poop-patrol"); }} style={{ ...card, display: "flex", gap: 14, marginBottom: 10, width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}>
+      <button onClick={() => { logEvent("game_play", "Poop Chaser"); go("poop-chaser"); }} style={{ ...card, display: "flex", gap: 14, marginBottom: 10, width: "100%", textAlign: "left", cursor: "pointer", border: "none" }}>
         <div style={{ width: 40, height: 40, borderRadius: 11, background: C.sandDeep, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 19 }}>
           💩
         </div>
         <div>
-          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>Poop Patrol</p>
+          <p style={{ margin: 0, fontSize: 14.5, fontWeight: 700, color: C.ink }}>Poop Chaser</p>
           <p style={{ margin: "3px 0 0", fontSize: 13, color: C.bark, lineHeight: 1.45 }}>Keep the path clear — drag your thumb to steer</p>
         </div>
       </button>
@@ -1339,16 +1339,16 @@ function WhackASquirrelScreen({ onBack }) {
   );
 }
 
-function PoopPatrolScreen({ onBack }) {
+function PoopChaserScreen({ onBack }) {
   return (
     <div style={{ position: "absolute", inset: 0, background: "#12251c", zIndex: 50, display: "flex", flexDirection: "column" }}>
       <div style={{ padding: "18px 20px 10px", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <button onClick={onBack} style={backBtn}><ChevronLeft size={20} color={C.ink} /></button>
-        <h2 style={{ fontFamily: displayFont, fontSize: 19, color: C.white, margin: 0 }}>Poop Patrol</h2>
+        <h2 style={{ fontFamily: displayFont, fontSize: 19, color: C.white, margin: 0 }}>Poop Chaser</h2>
       </div>
       <iframe
-        src="/games/poop-patrol.html"
-        title="Poop Patrol"
+        src="/games/poop-chaser.html"
+        title="Poop Chaser"
         style={{ flex: 1, width: "100%", border: "none" }}
       />
     </div>
@@ -2702,7 +2702,7 @@ function AdminStats() {
   const websites = rankEvents(events, ["directory_website", "contractor_website"]);
   const forms = rankEvents(events, ["form_launch"]);
   const gamePlays = events.filter((e) => e.type === "game_play" && e.label === "Whack-a-Squirrel").length;
-  const poopPatrolPlays = events.filter((e) => e.type === "game_play" && e.label === "Poop Patrol").length;
+  const poopChaserPlays = events.filter((e) => e.type === "game_play" && e.label === "Poop Chaser").length;
 
   return (
     <div>
@@ -2727,7 +2727,7 @@ function AdminStats() {
       </div>
 
       <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-        <StatCard icon={Star} label="Poop Patrol plays" value={poopPatrolPlays} />
+        <StatCard icon={Star} label="Poop Chaser plays" value={poopChaserPlays} />
       </div>
 
       <SectionLabel>Opens per day</SectionLabel>
@@ -2972,7 +2972,7 @@ export default function TreeTopsHubApp() {
   else if (tab === "contractors") content = <ContractorsScreen contractors={contractors} categories={contractorCategories} />;
   else if (tab === "emergency") content = <EmergencyContactsScreen contacts={emergencyContacts} contractors={contractors} contractorCategories={contractorCategories} onBack={() => go("home")} />;
   else if (tab === "whack-a-squirrel") content = <WhackASquirrelScreen onBack={() => go("more")} />;
-  else if (tab === "poop-patrol") content = <PoopPatrolScreen onBack={() => go("more")} />;
+  else if (tab === "poop-chaser") content = <PoopChaserScreen onBack={() => go("more")} />;
   else content = <MoreScreen onAdminTap={() => setAdminMode("gate")} info={info} settings={settings} go={go} />;
 
   return frame(

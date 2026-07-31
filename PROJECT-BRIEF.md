@@ -116,13 +116,13 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
-- **v1.13.0 (draft):** Added a second small game, "Poop Patrol", reachable
+- **v1.13.0 (draft):** Added a second small game, "Poop Chaser", reachable
   from More → Extras alongside Whack-a-Squirrel. Same pattern as that
   game: a standalone, self-contained HTML/CSS/JS file (canvas-based, no
   build step, no external deps besides Google Fonts — deliberately no
   embedded images this time, just emoji, to keep the file small) at
-  `public/games/poop-patrol.html`, shown full-screen in an iframe
-  (`PoopPatrolScreen`) rather than integrated as a React component. Five
+  `public/games/poop-chaser.html`, shown full-screen in an iframe
+  (`PoopChaserScreen`) rather than integrated as a React component. Five
   dogs walk along a band at the top of the canvas; at random intervals
   one of them "poops," dropping a 💩 that scrolls down a path toward the
   bottom at an increasing speed. The player (🧑, free-roaming, not
@@ -135,10 +135,10 @@ it — don't rebuild the theme from scratch.
   letting one scroll off the bottom of the screen costs one of 3 lives
   (screen-shake + "Missed!" feedback), and losing all 3 ends the run
   with a game-over card showing score vs. best. Best score persists via
-  `localStorage` (`poop-patrol-highscore` key), matching how
+  `localStorage` (`poop-chaser-highscore` key), matching how
   Whack-a-Squirrel's high score is stored. Logs a `game_play` usage
-  event (label `"Poop Patrol"`) the same way Whack-a-Squirrel's link
-  does, shown as its own "Poop Patrol plays" stat card in Admin → Stats.
+  event (label `"Poop Chaser"`) the same way Whack-a-Squirrel's link
+  does, shown as its own "Poop Chaser plays" stat card in Admin → Stats.
   No schema/Supabase changes. **This is a first draft, not yet tested
   on a real phone or reviewed by Andy** — the joystick feel, difficulty
   ramp, and dog/poop sizing on a small screen are the main things worth
