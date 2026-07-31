@@ -167,6 +167,34 @@ it — don't rebuild the theme from scratch.
     generic `serif` font-family to an explicit emoji font stack
     (`Segoe UI Emoji`/`Noto Color Emoji`/`Apple Color Emoji`) for more
     reliable glyph selection.
+  - **Flowering hedges + scroll-speed bug (31 Jul 2026):** added a
+    procedurally drawn hedge strip (leafy blobs, occasional pink/gold/
+    cream/purple flower) along both edges of the path, on Andy's
+    request, to tie the visuals to an actual park path rather than a
+    generic road — no image assets, pure canvas drawing. In the same
+    pass, found and fixed the hedge/centre-dash scroll position being
+    advanced by a flat `scrollSpeed * 0.4` every rendered frame instead
+    of by real elapsed time — on a fast display that's ~24x the
+    intended speed, which is why Andy saw the hedges flash past too
+    fast to see. Moved both into the dt-based tick() loop so they now
+    scroll at the same real-world pace as the poop itself.
+  - **Custom artwork (31 Jul 2026):** Andy commissioned a poop
+    character and a groundskeeper-with-scoop player character, pushed
+    them to `main` as `POOP.png`/`Player.png` (merged into this branch
+    from there — worth noting for next time: he doesn't have a way to
+    hand over files directly in chat, so GitHub is the handoff point).
+    Both had flat opaque backgrounds and a generator watermark;
+    processed via a border-connected flood-fill keyed to the sampled
+    background colour (with a per-image tuned threshold — the player's
+    baked-in foot shadow was close enough in colour to its yellow
+    background that a naive threshold left it as a floating blob),
+    cropped to content, downsized from 1331px to ~300px, and renamed to
+    lowercase `poop.png`/`player.png` (GitHub Pages is case-sensitive).
+    Wired into the canvas via `drawImage`, with the old emoji
+    fallback kept in case the images fail to load. The plain white
+    backing discs added for emoji contrast are no longer needed now
+    that the real artwork's own outline strokes provide contrast on
+    their own.
 - **v1.12.1:** Fixed Admin → Info's reorder buttons — they rendered but
   did nothing, since `AdminInfo`'s render loop never passed
   `onMoveUp`/`onMoveDown`/`disableUp`/`disableDown` to `AdminListItem`
