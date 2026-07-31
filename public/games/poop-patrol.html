@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Poop Chaser</title>
+<title>Poop Patrol</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -173,7 +173,7 @@
 
   <div class="overlay" id="start-overlay">
     <div class="card">
-      <h2>💩 Poop Chaser</h2>
+      <h2>💩 Poop Patrol</h2>
       <p>Five dogs, one path — keep it clear before it scrolls away!</p>
       <p>Drag your thumb anywhere to steer. Run over poop to scoop it before it reaches the bottom.</p>
       <div class="legend">
@@ -181,7 +181,7 @@
         <span>✨💩 = 5pts</span>
         <span>❤️ = 3 misses allowed</span>
       </div>
-      <button class="main-btn" id="start-btn">Start chasing</button>
+      <button class="main-btn" id="start-btn">Start patrol</button>
     </div>
   </div>
 
@@ -190,7 +190,7 @@
       <h2>Path's a mess!</h2>
       <p class="big" id="final-score">Score: 0</p>
       <p id="best-msg">Best: 0</p>
-      <button class="main-btn" id="restart-btn">Chase again</button>
+      <button class="main-btn" id="restart-btn">Patrol again</button>
     </div>
   </div>
 </div>
@@ -199,7 +199,7 @@
 (function(){
   "use strict";
 
-  var HIGH_SCORE_KEY = "poop-chaser-highscore";
+  var HIGH_SCORE_KEY = "poop-patrol-highscore";
   var canvas = document.getElementById("game");
   var ctx = canvas.getContext("2d");
   var wrap = document.getElementById("canvas-wrap");
