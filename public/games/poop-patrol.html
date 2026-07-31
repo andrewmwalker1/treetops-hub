@@ -243,6 +243,16 @@
   bestEl.textContent = bestScore;
 
   var EMOJI_FONT = "'Segoe UI Emoji','Noto Color Emoji','Apple Color Emoji',sans-serif";
+
+  var poopImg = new Image();
+  var poopImgReady = false;
+  poopImg.onload = function(){ poopImgReady = true; };
+  poopImg.src = "poop.png";
+
+  var playerImg = new Image();
+  var playerImgReady = false;
+  playerImg.onload = function(){ playerImgReady = true; };
+  playerImg.src = "player.png";
   var DOG_EMOJI = ["🐶", "🐩", "🦮"];
 
   var HEDGE_TILE_H = 150;
@@ -645,21 +655,18 @@
         ctx.arc(0, 0, glowR, 0, Math.PI * 2);
         ctx.fill();
       }
-      // solid backing disc so the poop always reads clearly against the path,
-      // regardless of how light/flat a platform's emoji artwork is
-      ctx.fillStyle = "rgba(244,239,227,0.92)";
-      ctx.beginPath();
-      ctx.arc(0, 1, p.r * 1.08, 0, Math.PI * 2);
-      ctx.fill();
-      if (p.golden){
-        ctx.font = (p.r * 1.9) + "px " + EMOJI_FONT;
-        ctx.fillText("💩", 0, 2);
-        ctx.font = (p.r * 1.1) + "px " + EMOJI_FONT;
-        ctx.fillText("✨", p.r * 1.1, -p.r * 1.1 + Math.sin(p.sparklePhase) * 3);
-        ctx.fillText("✨", -p.r * 1.1, p.r * 0.6 + Math.cos(p.sparklePhase) * 3);
+      if (poopImgReady){
+        var poopDrawH = p.r * 2.3;
+        var poopDrawW = poopDrawH * (poopImg.naturalWidth / poopImg.naturalHeight);
+        ctx.drawImage(poopImg, -poopDrawW / 2, -poopDrawH / 2 + 2, poopDrawW, poopDrawH);
       } else {
         ctx.font = (p.r * 1.9) + "px " + EMOJI_FONT;
         ctx.fillText("💩", 0, 2);
+      }
+      if (p.golden){
+        ctx.font = (p.r * 1.1) + "px " + EMOJI_FONT;
+        ctx.fillText("✨", p.r * 1.1, -p.r * 1.1 + Math.sin(p.sparklePhase) * 3);
+        ctx.fillText("✨", -p.r * 1.1, p.r * 0.6 + Math.cos(p.sparklePhase) * 3);
       }
       ctx.restore();
     }
@@ -672,15 +679,15 @@
     ctx.beginPath();
     ctx.ellipse(0, player.r * 0.85, player.r * 0.7, player.r * 0.25, 0, 0, Math.PI * 2);
     ctx.fill();
-    // solid backing disc behind the player, same reasoning as the poop's --
-    // keeps them from ever blending into the path's colour
-    ctx.fillStyle = "rgba(244,239,227,0.92)";
-    ctx.beginPath();
-    ctx.arc(0, 0, player.r * 1.05, 0, Math.PI * 2);
-    ctx.fill();
     ctx.scale(player.facing, 1);
-    ctx.font = (player.r * 2.1) + "px " + EMOJI_FONT;
-    ctx.fillText("🧑", 0, 0);
+    if (playerImgReady){
+      var playerDrawH = player.r * 2.7;
+      var playerDrawW = playerDrawH * (playerImg.naturalWidth / playerImg.naturalHeight);
+      ctx.drawImage(playerImg, -playerDrawW / 2, player.r * 0.9 - playerDrawH, playerDrawW, playerDrawH);
+    } else {
+      ctx.font = (player.r * 2.1) + "px " + EMOJI_FONT;
+      ctx.fillText("🧑", 0, 0);
+    }
     ctx.restore();
 
     // particles
