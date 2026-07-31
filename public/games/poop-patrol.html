@@ -634,6 +634,13 @@
       ctx.save();
       ctx.translate(d.laneX + wig, DOG_ROW_H * 0.58);
       ctx.scale(squashX, squashY);
+      // backing disc for contrast -- these are still plain emoji (no custom
+      // art yet, unlike the poop/player), and some platforms render dog
+      // emoji in pale, washed-out tones that blend into the dog row's green
+      ctx.fillStyle = "rgba(244,239,227,0.92)";
+      ctx.beginPath();
+      ctx.arc(0, 2, 21, 0, Math.PI * 2);
+      ctx.fill();
       ctx.font = "34px " + EMOJI_FONT;
       ctx.fillText(d.emoji, 0, 0);
       ctx.restore();
