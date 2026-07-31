@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 29 Jul 2026 (App.jsx APP_VERSION 1.12.1)
+**Last updated:** 31 Jul 2026 (App.jsx APP_VERSION 1.13.0)
 
 ## Who you're talking to
 
@@ -116,6 +116,33 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
+- **v1.13.0 (draft):** Added a second small game, "Poop Patrol", reachable
+  from More → Extras alongside Whack-a-Squirrel. Same pattern as that
+  game: a standalone, self-contained HTML/CSS/JS file (canvas-based, no
+  build step, no external deps besides Google Fonts — deliberately no
+  embedded images this time, just emoji, to keep the file small) at
+  `public/games/poop-patrol.html`, shown full-screen in an iframe
+  (`PoopPatrolScreen`) rather than integrated as a React component. Five
+  dogs walk along a band at the top of the canvas; at random intervals
+  one of them "poops," dropping a 💩 that scrolls down a path toward the
+  bottom at an increasing speed. The player (🧑, free-roaming, not
+  lane-locked) is steered with a floating virtual joystick — press and
+  drag anywhere on the canvas to move, release to stop — implemented
+  with Pointer Events (covers touch and mouse) rather than raw touch
+  events, so it's also mouse-drivable for desktop testing. Running over
+  a poop scores 1 point (5 for a rarer golden/sparkly poop, ~13% spawn
+  chance) with a small particle-burst-and-floating-score-text animation;
+  letting one scroll off the bottom of the screen costs one of 3 lives
+  (screen-shake + "Missed!" feedback), and losing all 3 ends the run
+  with a game-over card showing score vs. best. Best score persists via
+  `localStorage` (`poop-patrol-highscore` key), matching how
+  Whack-a-Squirrel's high score is stored. Logs a `game_play` usage
+  event (label `"Poop Patrol"`) the same way Whack-a-Squirrel's link
+  does, shown as its own "Poop Patrol plays" stat card in Admin → Stats.
+  No schema/Supabase changes. **This is a first draft, not yet tested
+  on a real phone or reviewed by Andy** — the joystick feel, difficulty
+  ramp, and dog/poop sizing on a small screen are the main things worth
+  checking before calling it done.
 - **v1.12.1:** Fixed Admin → Info's reorder buttons — they rendered but
   did nothing, since `AdminInfo`'s render loop never passed
   `onMoveUp`/`onMoveDown`/`disableUp`/`disableDown` to `AdminListItem`
