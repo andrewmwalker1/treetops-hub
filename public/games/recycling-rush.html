@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Recycling Rush</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canopy-dark:#1b3b2f;
+    --canopy:#254f3d;
+    --bark-dark:#3a2419;
+    --amber:#e8a33d;
+    --cream:#f4efe3;
+    --danger:#c1443b;
+    --paper:#2f6fd6;
+    --paper-dark:#2557ad;
+    --plastic:#e8b923;
+    --plastic-dark:#c79a0f;
+    --glass:#2f9e52;
+    --glass-dark:#227a3f;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0;
+    height:100%;
+    overflow:hidden;
+    background:var(--canopy-dark);
+    font-family:'Nunito',sans-serif;
+    color:var(--cream);
+    touch-action:none;
+    overscroll-behavior:none;
+  }
+  #stage{
+    position:fixed;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    background:radial-gradient(circle at 50% 0%, #2d5843 0%, var(--canopy-dark) 60%, #12251c 100%);
+  }
+  .hud{
+    flex-shrink:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    background:rgba(0,0,0,0.28);
+    padding:10px 16px;
+    font-family:'Baloo 2',cursive;
+    border-bottom:2px solid rgba(232,163,61,0.35);
+    gap:10px;
+    z-index:5;
+  }
+  .hud .stat{text-align:center;}
+  .hud .label{
+    display:block;
+    font-family:'Nunito',sans-serif;
+    font-size:0.58rem;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    opacity:0.65;
+    margin-bottom:1px;
+  }
+  .hud .value{font-size:1.25rem;}
+  #score-val{color:var(--amber);}
+  #timer-val{color:var(--cream);}
+  #timer-val.low{color:var(--danger);}
+  .meter-wrap{flex:1; max-width:140px;}
+  .meter-track{
+    width:100%;
+    height:10px;
+    border-radius:6px;
+    background:rgba(255,255,255,0.15);
+    overflow:hidden;
+    margin-top:3px;
+  }
+  .meter-fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg, #e8b923, var(--danger));
+    transition:width 0.25s ease;
+  }
+  #main-area{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    min-height:0;
+    padding:10px;
+  }
+  #item-card{
+    background:var(--cream);
+    border:4px solid var(--bark-dark);
+    border-radius:26px;
+    padding:22px 34px;
+    text-align:center;
+    box-shadow:0 8px 0 rgba(0,0,0,0.25);
+    animation:bob 1.8s ease-in-out infinite;
+  }
+  #item-card.correct{animation:flashGreen 0.45s ease;}
+  #item-card.wrong{animation:shakeRed 0.45s ease;}
+  #item-emoji{
+    font-size:5rem;
+    line-height:1;
+    display:block;
+  }
+  #item-label{
+    margin:8px 0 0;
+    font-family:'Baloo 2',cursive;
+    font-size:1.1rem;
+    color:var(--bark-dark);
+    font-weight:700;
+  }
+  @keyframes bob{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-10px);}
+  }
+  @keyframes flashGreen{
+    0%{box-shadow:0 8px 0 rgba(0,0,0,0.25), 0 0 0 0 rgba(47,158,82,0.7);}
+    50%{box-shadow:0 8px 0 rgba(0,0,0,0.25), 0 0 0 18px rgba(47,158,82,0);}
+    100%{box-shadow:0 8px 0 rgba(0,0,0,0.25);}
+  }
+  @keyframes shakeRed{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-14px);}
+    40%{transform:translateX(12px);}
+    60%{transform:translateX(-8px);}
+    80%{transform:translateX(6px);}
+  }
+  #item-card.wrong{border-color:var(--danger);}
+  #bins{
+    flex-shrink:0;
+    display:flex;
+    gap:10px;
+    padding:14px 12px calc(14px + env(safe-area-inset-bottom));
+  }
+  .bin-btn{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:4px;
+    border:4px solid var(--bark-dark);
+    border-radius:20px;
+    padding:16px 6px;
+    cursor:pointer;
+    font-family:'Baloo 2',cursive;
+    font-weight:700;
+    font-size:0.82rem;
+    color:#1a1a1a;
+    box-shadow:0 5px 0 rgba(0,0,0,0.3);
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .bin-btn:active{
+    transform:translateY(4px);
+    box-shadow:0 1px 0 rgba(0,0,0,0.3);
+  }
+  .bin-btn .bin-emoji{font-size:2rem;}
+  .bin-paper{background:linear-gradient(180deg, var(--paper), var(--paper-dark)); color:var(--cream);}
+  .bin-plastic{background:linear-gradient(180deg, var(--plastic), var(--plastic-dark));}
+  .bin-glass{background:linear-gradient(180deg, var(--glass), var(--glass-dark)); color:var(--cream);}
+
+  .overlay{
+    position:absolute;
+    inset:0;
+    background:rgba(10,20,15,0.88);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:20;
+    padding:20px;
+  }
+  .overlay.hidden{display:none;}
+  .card{
+    background:var(--canopy);
+    border:3px solid var(--amber);
+    border-radius:22px;
+    padding:28px 26px;
+    text-align:center;
+    max-width:340px;
+  }
+  .card h2{
+    font-family:'Baloo 2',cursive;
+    font-size:1.7rem;
+    color:var(--amber);
+    margin:0 0 6px;
+    text-shadow:0 2px 0 var(--bark-dark);
+  }
+  .card p{font-size:0.88rem; opacity:0.85; line-height:1.5; margin:6px 0;}
+  .card .big{font-size:1.4rem; font-weight:800; color:var(--cream); font-family:'Baloo 2',cursive;}
+  button.main-btn{
+    font-family:'Baloo 2',cursive;
+    font-size:1.05rem;
+    font-weight:700;
+    background:linear-gradient(180deg, var(--amber), #c9822a);
+    color:#2a1810;
+    border:none;
+    padding:12px 32px;
+    border-radius:14px;
+    cursor:pointer;
+    box-shadow:0 4px 0 #a56a1f;
+    margin-top:14px;
+  }
+  button.main-btn:active{
+    transform:translateY(3px);
+    box-shadow:0 1px 0 #a56a1f;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="hud">
+    <div class="stat"><span class="label">Score</span><span class="value" id="score-val">0</span></div>
+    <div class="stat" style="min-width:52px;"><span class="label">Time</span><span class="value" id="timer-val">30</span></div>
+    <div class="meter-wrap">
+      <span class="label" style="text-align:center; display:block;">Contamination</span>
+      <div class="meter-track"><div class="meter-fill" id="meter-fill"></div></div>
+    </div>
+    <div class="stat"><span class="label">Best</span><span class="value" id="best-val">0</span></div>
+  </div>
+
+  <div id="main-area">
+    <div id="item-card">
+      <span id="item-emoji">📰</span>
+      <p id="item-label">Newspaper</p>
+    </div>
+  </div>
+
+  <div id="bins">
+    <button class="bin-btn bin-paper" data-type="paper">
+      <span class="bin-emoji">♻️</span>
+      Paper &amp; Card
+    </button>
+    <button class="bin-btn bin-plastic" data-type="plastic">
+      <span class="bin-emoji">♻️</span>
+      Plastic, Cans &amp; Cartons
+    </button>
+    <button class="bin-btn bin-glass" data-type="glass">
+      <span class="bin-emoji">♻️</span>
+      Glass
+    </button>
+  </div>
+
+  <div class="overlay" id="start-overlay">
+    <div class="card">
+      <h2>♻️ Recycling Rush</h2>
+      <p>Sort each item into the right bin before the clock runs out. Get it wrong too often and the load's contaminated — game over.</p>
+      <p>Tap the correct bin for each item. 30 seconds on the clock.</p>
+      <button class="main-btn" id="start-btn">Start sorting</button>
+    </div>
+  </div>
+
+  <div class="overlay hidden" id="gameover-overlay">
+    <div class="card">
+      <h2 id="gameover-title">Time's up!</h2>
+      <p class="big" id="final-score">Score: 0</p>
+      <p id="best-msg">Best: 0</p>
+      <button class="main-btn" id="restart-btn">Sort again</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var HIGH_SCORE_KEY = "recycling-rush-highscore";
+
+  function safeGetHighScore(){
+    try { return parseInt(localStorage.getItem(HIGH_SCORE_KEY) || "0", 10) || 0; }
+    catch (err) { return 0; }
+  }
+  function safeSetHighScore(value){
+    try { localStorage.setItem(HIGH_SCORE_KEY, String(value)); }
+    catch (err) { /* localStorage unavailable (e.g. file:// origin) -- best score just won't persist */ }
+  }
+
+  var ITEMS = [
+    { id: "newspaper", type: "paper", label: "Newspaper", emoji: "📰" },
+    { id: "cardboard_box", type: "paper", label: "Cardboard Box", emoji: "📦" },
+    { id: "plastic_bottle", type: "plastic", label: "Plastic Bottle", emoji: "🧴" },
+    { id: "tin_can", type: "plastic", label: "Tin Can", emoji: "🥫" },
+    { id: "milk_carton", type: "plastic", label: "Milk Carton", emoji: "🧃" },
+    { id: "wine_bottle", type: "glass", label: "Wine Bottle", emoji: "🍾" },
+    { id: "jam_jar", type: "glass", label: "Jam Jar", emoji: "🫙" }
+  ];
+
+  var scoreEl = document.getElementById("score-val");
+  var timerEl = document.getElementById("timer-val");
+  var bestEl = document.getElementById("best-val");
+  var meterFillEl = document.getElementById("meter-fill");
+  var itemCard = document.getElementById("item-card");
+  var itemEmojiEl = document.getElementById("item-emoji");
+  var itemLabelEl = document.getElementById("item-label");
+  var startOverlay = document.getElementById("start-overlay");
+  var gameoverOverlay = document.getElementById("gameover-overlay");
+  var gameoverTitle = document.getElementById("gameover-title");
+  var finalScoreEl = document.getElementById("final-score");
+  var bestMsgEl = document.getElementById("best-msg");
+  var bins = Array.prototype.slice.call(document.querySelectorAll(".bin-btn"));
+
+  var bestScore = safeGetHighScore();
+  bestEl.textContent = bestScore;
+
+  var score = 0;
+  var timeRemaining = 30;
+  var contamination = 0;
+  var currentItem = null;
+  var isRunning = false;
+  var countdownTimer = null;
+  var animLockUntil = 0;
+
+  function randomItem(){
+    var pick;
+    do {
+      pick = ITEMS[Math.floor(Math.random() * ITEMS.length)];
+    } while (currentItem && pick.id === currentItem.id && ITEMS.length > 1);
+    return pick;
+  }
+
+  function spawnItem(){
+    currentItem = randomItem();
+    itemEmojiEl.textContent = currentItem.emoji;
+    itemLabelEl.textContent = currentItem.label;
+  }
+
+  function updateHud(){
+    scoreEl.textContent = score;
+    timerEl.textContent = timeRemaining;
+    timerEl.classList.toggle("low", timeRemaining <= 10);
+    meterFillEl.style.width = Math.min(100, contamination) + "%";
+    bestEl.textContent = bestScore;
+  }
+
+  function startGame(){
+    score = 0;
+    timeRemaining = 30;
+    contamination = 0;
+    isRunning = true;
+    spawnItem();
+    updateHud();
+    clearInterval(countdownTimer);
+    countdownTimer = setInterval(function(){
+      if (!isRunning) return;
+      timeRemaining -= 1;
+      updateHud();
+      if (timeRemaining <= 0){
+        endGame("Time's up!");
+      }
+    }, 1000);
+  }
+
+  function sortInto(type){
+    if (!isRunning) return;
+    if (Date.now() < animLockUntil) return;
+    var correct = currentItem.type === type;
+    if (correct){
+      score += 10;
+      itemCard.classList.remove("wrong");
+      void itemCard.offsetWidth;
+      itemCard.classList.add("correct");
+    } else {
+      contamination += 10;
+      itemCard.classList.remove("correct");
+      void itemCard.offsetWidth;
+      itemCard.classList.add("wrong");
+    }
+    updateHud();
+    animLockUntil = Date.now() + 320;
+
+    if (contamination >= 100){
+      setTimeout(function(){ endGame("Contaminated!"); }, 320);
+      return;
+    }
+    setTimeout(function(){
+      itemCard.classList.remove("correct", "wrong");
+      spawnItem();
+    }, 320);
+  }
+
+  function endGame(title){
+    isRunning = false;
+    clearInterval(countdownTimer);
+    if (score > bestScore){
+      bestScore = score;
+      safeSetHighScore(bestScore);
+    }
+    gameoverTitle.textContent = title;
+    finalScoreEl.textContent = "Score: " + score;
+    bestMsgEl.textContent = "Best: " + bestScore;
+    gameoverOverlay.classList.remove("hidden");
+    updateHud();
+  }
+
+  bins.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      sortInto(btn.getAttribute("data-type"));
+    });
+  });
+
+  document.getElementById("start-btn").addEventListener("click", function(){
+    startOverlay.classList.add("hidden");
+    startGame();
+  });
+  document.getElementById("restart-btn").addEventListener("click", function(){
+    gameoverOverlay.classList.add("hidden");
+    startGame();
+  });
+})();
+</script>
+</body>
+</html>

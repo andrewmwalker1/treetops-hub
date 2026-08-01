@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 31 Jul 2026 (App.jsx APP_VERSION 1.13.0)
+**Last updated:** 31 Jul 2026 (App.jsx APP_VERSION 1.14.0)
 
 ## Who you're talking to
 
@@ -116,7 +116,29 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
-- **v1.13.0 (draft):** Added a second small game, "Poop Patrol", reachable
+- **v1.14.0 (draft):** Added a third small game, "Recycling Rush", reachable
+  from More → Extras alongside Whack-a-Squirrel and Poop Patrol. Same
+  pattern as those two: a standalone, self-contained HTML/CSS/JS file
+  (no build step, emoji-only, no images) at
+  `public/games/recycling-rush.html`, shown full-screen in an iframe
+  (`RecyclingRushScreen`). Andy supplied the brief (originally written
+  assuming a multi-file React component structure with client-side
+  routes — adapted to this repo's actual single-file-app/iframe-game
+  convention instead, which he confirmed was the right call). One item
+  (newspaper, cardboard box, plastic bottle, tin can, milk carton, wine
+  bottle, or jam jar) displays at a time with a gentle bob animation;
+  tapping one of three colour-coded bins (Paper & Card / Plastic, Cans &
+  Cartons / Glass) scores +10 on a correct match (green flash) or +10
+  contamination on a miss (red shake), then the next random item spawns
+  (never repeating the same item twice running). 30-second countdown;
+  game ends on timeout or contamination reaching 100, whichever comes
+  first, showing a results card with score vs. best. Best score
+  persists via `localStorage` (`recycling-rush-highscore`), same
+  safe-get/safe-set wrapper pattern as Poop Patrol's fix for
+  `file://`-origin storage errors. Logs a `game_play` usage event
+  (label `"Recycling Rush"`), surfaced as its own "Recycling Rush
+  plays" stat card in Admin → Stats. No schema/Supabase changes.
+- **v1.13.0:** Added a second small game, "Poop Patrol", reachable
   from More → Extras alongside Whack-a-Squirrel. Same pattern as that
   game: a standalone, self-contained HTML/CSS/JS file (canvas-based, no
   build step, no external deps besides Google Fonts — deliberately no
