@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 31 Jul 2026 (App.jsx APP_VERSION 1.13.0)
+**Last updated:** 6 Aug 2026 (App.jsx APP_VERSION 1.14.0)
 
 ## Who you're talking to
 
@@ -18,8 +18,9 @@ prior technical knowledge he hasn't demonstrated.
 Tree Tops Hub — a Progressive Web App (PWA) for park guests, live at
 **hub.treetops.co.uk**. Guests add it to their phone's home screen (no
 App Store). It has five sections: Home, Notices, Forms, Explore (local
-businesses), and Contractors — plus a PIN-protected admin portal built
-into the app itself, so Andy can manage content without touching code.
+businesses), and Contractors — plus an admin portal built into the app
+itself (real per-person sign-in as of v1.14.0, see below), so Andy can
+manage content without touching code.
 
 ## Tech stack & where everything lives
 
@@ -97,12 +98,21 @@ into the app itself, so Andy can manage content without touching code.
     which a session with CLI access applied and verified), so Andy ran
     it himself via the Supabase SQL Editor. **Confirmed applied and
     working (21 Jul 2026)** — PDF upload succeeds now.
-  - Admin PIN inside the app (fallback/legacy reference): `1960`
-- No user auth beyond the admin PIN. Anon key is public by design — RLS
-  and `security definer` Postgres functions are the real access control,
-  not table grants. Follow this pattern for any new write path: don't
-  grant the anon key direct table privileges, write through a narrowly
-  scoped `security definer` function instead.
+  - Admin PIN inside the app (retired in v1.14.0, kept here for history
+    only): `1960`
+  - `05-real-admin-auth.sql` / `06-fix-hub-admins-rls-recursion.sql` /
+    `07-fix-public-write-policy-names.sql` — retire the shared PIN in
+    favour of real Supabase Auth (see "Admin auth" under Features built
+    so far for the full story, including two live bugs found and fixed
+    while building this). **Confirmed applied and verified (6 Aug
+    2026).**
+- Real per-person admin auth as of v1.14.0 (magic link + OTP code via
+  Supabase Auth, `hub_admins` table gates who counts as an admin) — see
+  "Admin auth" below. Anon key is still public by design for guest-facing
+  reads/writes; RLS and `security definer` Postgres functions are the
+  real access control, not table grants. Follow this pattern for any new
+  write path: don't grant the anon key direct table privileges, write
+  through a narrowly scoped `security definer` function instead.
 
 ## Brand identity
 
@@ -116,6 +126,64 @@ it — don't rebuild the theme from scratch.
 
 ## Features built so far
 
+- **v1.14.0 — Admin auth:** Replaced the single shared admin PIN with
+  real per-person sign-in via Supabase Auth, matching the pattern
+  already proven in the sister Maintenance app's `Login.jsx` — magic
+  link **and** a 6-digit OTP code in the same email (the code exists
+  specifically because magic links can't hand control back to an
+  installed PWA on iOS; typing the code sidesteps that). `hub_admins`
+  (id references `auth.users`, email, display_name) gates who counts as
+  an admin; `AdminLogin` checks membership after verify and signs the
+  user back out with an error if they authenticated but aren't listed.
+  Admins are invited from Admin → Settings → Admin Users, which calls a
+  new `invite-hub-admin` Edge Function (service-role key, re-checks the
+  caller's own `hub_admins` membership before doing anything). Andy,
+  Jayne, and Info (`info@treetopscaravanpark.co.uk`) are the three
+  admins as of this writing. `saveData()` and `uploadFileToStorage()`
+  now go through `supabase-js` (`supabase.from(...).upsert(...)` /
+  `supabase.storage...`) instead of raw `fetch()` with anon-key-only
+  headers, so writes carry the signed-in admin's session token.
+  - **Serious bug found & fixed while verifying this (6 Aug 2026):**
+    after shipping the new RLS policies, anonymous writes to `app_data`
+    still worked — confirmed by a deliberate anon-key-only test POST
+    that should have been rejected and wasn't. Root cause: the
+    migration's `DROP POLICY IF EXISTS "Public write on app_data"` used
+    the wrong literal name (a display label from an old report, not the
+    real stored policy name, which is just `"Public write"`) —
+    `DROP POLICY IF EXISTS` silently no-ops on a non-match, so the old
+    wide-open policy stayed active the whole time. Since Postgres allows
+    a write if *any* permissive policy allows it, that alone was enough
+    to bypass the new admin-only policy regardless. Fixed by
+    `07-fix-public-write-policy-names.sql`, dropping the correctly-named
+    policies. Re-verified with the same anon-only test — now correctly
+    rejected with a `42501` RLS error.
+    **This bug also caused real data loss**, since the verification
+    test that first exposed it wrote to the live `notices` key instead
+    of a scratch key — overwriting the real homepage notices with test
+    data. Recovered by reading the still-open browser tab's React state
+    (the page hadn't reloaded) via the admin Edit screens, rebuilding
+    the original 7 notices field-by-field, and re-saving. Verified the
+    guest homepage matched the original content afterwards. Lesson
+    applied: RLS verification tests now always use an obviously-fake
+    scratch key (e.g. `rls_test_probe`), never a real one.
+  - **Second bug found & fixed (6 Aug 2026):** Info's invite looked like
+    it failed — she reported an error and landed on `localhost`. Cause:
+    the Supabase project's Auth **Site URL** had never been changed from
+    the default placeholder `http://localhost:3000`, and the Redirect
+    URLs allow-list was empty, so `inviteUserByEmail()` (called with no
+    explicit `redirectTo`) fell back to that placeholder. Supabase
+    confirms the account server-side *before* redirecting, so Info's
+    account was actually confirmed correctly — she just landed on a dead
+    page afterwards. Fixed by setting Site URL to
+    `https://hub.treetops.co.uk`, adding it (plus the local dev ports)
+    to the Redirect URLs allow-list, and adding an explicit `redirectTo`
+    to the Edge Function's `inviteUserByEmail()` call so it can't
+    silently regress if the Site URL setting ever changes again.
+  - **Not yet deployed to production as of this writing** — all of the
+    above has been built, migrated live, and verified against the real
+    Supabase backend from the local dev server only.
+    `hub.treetops.co.uk` is still running the old PIN-based build until
+    this ships via a merged PR.
 - **v1.13.0 (draft):** Added a second small game, "Poop Patrol", reachable
   from More → Extras alongside Whack-a-Squirrel. Same pattern as that
   game: a standalone, self-contained HTML/CSS/JS file (canvas-based, no
