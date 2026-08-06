@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 import {
   Home, Bell, ClipboardList, Info, MoreHorizontal, ChevronLeft, ChevronRight,
   Check, Wifi, Zap, PhoneCall, MapPin, Car, Home as HomeIcon2, Lock, Plus, Trash2,
@@ -28,10 +29,10 @@ const LOGO_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAoAAAAGoCAY
 const displayFont = '"Iowan Old Style", "Palatino Linotype", Georgia, serif';
 const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
 
-// Admin PIN is verified server-side (see verifyAdminPin below) — it is
-// no longer stored or compared in the browser.
-const APP_VERSION = "1.13.0";
-const BUILD_DATE = "31 Jul 2026";
+// Admin access is real Supabase Auth (magic link/OTP) checked against
+// the hub_admins allowlist — see AdminLogin below.
+const APP_VERSION = "1.14.0";
+const BUILD_DATE = "6 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -166,6 +167,13 @@ const CATEGORY_NAME = (categories, id) => (categories.find((c) => c.id === id)?.
 const SUPABASE_URL = "https://qkbpsqlrzygcairtidye.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrYnBzcWxyenlnY2FpcnRpZHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMzIzNTYsImV4cCI6MjA5OTYwODM1Nn0.8v079nsYm6YlMBa5X41IP2NK7qP1uozJoGnB74ORWbg";
 
+// Used for admin sign-in (magic link/OTP) and for any write that now
+// needs to carry the signed-in admin's session token instead of just the
+// anon key -- see saveData/uploadFileToStorage below. Reuses the same
+// URL/anon key already defined above rather than introducing env vars,
+// consistent with how the rest of this file works.
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // Public half of the VAPID key pair used for Web Push. Safe to expose —
 // it's the whole point of it. The private half lives only as a Supabase
 // Edge Function secret and is never shipped to the browser.
@@ -190,47 +198,14 @@ async function loadData(key, fallback) {
     return fallback;
   }
 }
-// The admin PIN is now checked server-side by a Postgres function
-// (verify_admin_pin) via Supabase RPC. The real PIN is stored hashed in
-// the database and never sent to the browser — only true/false comes back.
-async function verifyAdminPin(pinAttempt) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/verify_admin_pin`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ pin_attempt: pinAttempt }),
-    });
-    if (!res.ok) return false;
-    const result = await res.json();
-    return result === true;
-  } catch {
-    return false;
-  }
-}
 
+// Uses the supabase-js client (not raw fetch) specifically so this
+// carries the signed-in admin's session token automatically -- app_data
+// writes now require it (see 05-real-admin-auth.sql), rather than the
+// old "anyone with the anon key" policy.
 async function saveData(key, value) {
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/app_data`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-        Prefer: "resolution=merge-duplicates,return=minimal",
-      },
-      body: JSON.stringify([{ key, value }]),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      console.error(`Save to "${key}" failed (${res.status}):`, text);
-    }
-  } catch (err) {
-    console.error(`Save to "${key}" failed (network error):`, err);
-  }
+  const { error } = await supabase.from("app_data").upsert({ key, value }, { onConflict: "key" });
+  if (error) console.error(`Save to "${key}" failed:`, error.message);
 }
 
 // Storage bucket for admin-uploaded files — Info's PDF guides and Notices'
@@ -245,21 +220,17 @@ const UPLOAD_STORAGE_BUCKET = "info-pdfs";
 // Uploads a file to Supabase Storage and returns its public URL, or throws
 // with a readable message on failure (e.g. bucket missing, policy denies it).
 // Caller is responsible for validating file type before calling this.
+// Same reasoning as saveData -- uses the client so the signed-in admin's
+// session is attached, required now that info_pdfs_insert_admin checks
+// hub_admins membership instead of accepting any anon-key request.
 async function uploadFileToStorage(file) {
   const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, "-");
   const path = `${Date.now()}-${uid()}-${safeName}`;
-  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${UPLOAD_STORAGE_BUCKET}/${path}`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": file.type || "application/octet-stream",
-    },
-    body: file,
+  const { error } = await supabase.storage.from(UPLOAD_STORAGE_BUCKET).upload(path, file, {
+    contentType: file.type || "application/octet-stream",
   });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Upload failed (${res.status}): ${text || "check the bucket exists and is public"}`);
+  if (error) {
+    throw new Error(`Upload failed: ${error.message || "check the bucket exists and is public"}`);
   }
   return `${SUPABASE_URL}/storage/v1/object/public/${UPLOAD_STORAGE_BUCKET}/${path}`;
 }
@@ -1357,19 +1328,83 @@ function PoopPatrolScreen({ onBack }) {
 
 // ---------------- ADMIN ----------------
 
-function AdminGate({ onSuccess, onCancel }) {
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState(false);
-  const [checking, setChecking] = useState(false);
+// Replaces the old shared-PIN gate with real Supabase Auth (magic link
+// + a typed code as a fallback). The code fallback matters specifically
+// for iOS home-screen PWAs: tapping an email link can't hand control
+// back to an already-installed PWA, it always opens Safari instead,
+// leaving the installed app itself still signed out. Typing the code
+// keeps the whole flow inside the app, so it works the same whether
+// this is a browser tab or installed to the home screen.
+function AdminLogin({ onSuccess, onCancel }) {
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [status, setStatus] = useState("checking"); // checking | idle | sending | sent | verifying | error
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const submit = async () => {
-    if (checking) return;
-    setChecking(true);
-    const ok = await verifyAdminPin(pin);
-    setChecking(false);
-    if (ok) onSuccess();
-    else { setError(true); setPin(""); }
-  };
+  // If there's already a valid session for an approved admin (e.g. they
+  // signed in earlier and haven't explicitly exited), skip straight past
+  // the form instead of asking them to sign in again every time.
+  useEffect(() => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data: adminRow } = await supabase.from("hub_admins").select("id").eq("id", session.user.id).maybeSingle();
+        if (adminRow) {
+          onSuccess();
+          return;
+        }
+      }
+      setStatus("idle");
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleSendCode(e) {
+    e.preventDefault();
+    setStatus("sending");
+    setErrorMessage("");
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    if (error) {
+      setStatus("error");
+      setErrorMessage(error.message);
+      return;
+    }
+    setStatus("sent");
+  }
+
+  async function handleVerifyCode(e) {
+    e.preventDefault();
+    setStatus("verifying");
+    setErrorMessage("");
+    const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: "email" });
+    if (error) {
+      setStatus("sent");
+      setErrorMessage(error.message);
+      return;
+    }
+    // A successful magic-link/OTP sign-in happily creates an auth.users
+    // row for any email typed in -- hub_admins is the real allowlist, so
+    // check it before treating this as a real admin session.
+    const { data: adminRow } = await supabase.from("hub_admins").select("id").eq("id", data.user.id).maybeSingle();
+    if (!adminRow) {
+      setErrorMessage("This email isn't set up for admin access. Ask another admin to invite you.");
+      setStatus("sent");
+      await supabase.auth.signOut();
+      return;
+    }
+    onSuccess();
+  }
+
+  function handleUseDifferentEmail() {
+    setStatus("idle");
+    setCode("");
+    setErrorMessage("");
+  }
+
+  if (status === "checking") return null;
 
   return (
     <div style={{ padding: "60px 24px", background: C.ink, minHeight: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -1380,19 +1415,49 @@ function AdminGate({ onSuccess, onCancel }) {
         <Lock size={24} color={C.greenBright} />
       </div>
       <h2 style={{ fontFamily: displayFont, color: C.white, fontSize: 20, margin: "0 0 6px" }}>Staff admin</h2>
-      <p style={{ color: C.mist, fontSize: 13, margin: "0 0 24px", textAlign: "center" }}>Enter the PIN to manage notices, forms and info.</p>
-      <input
-        type="password"
-        inputMode="numeric"
-        value={pin}
-        onChange={(e) => { setPin(e.target.value); setError(false); }}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-        style={{ width: "100%", maxWidth: 220, textAlign: "center", fontSize: 20, letterSpacing: 6, padding: "12px", borderRadius: 12, border: `1.5px solid ${error ? C.danger : C.mist}`, marginBottom: 12, outline: "none" }}
-      />
-      {error && <p style={{ color: "#E7A08F", fontSize: 12.5, margin: "0 0 12px" }}>Incorrect PIN, try again</p>}
-      <button onClick={submit} disabled={checking} style={{ ...btnPrimary, maxWidth: 220, background: C.greenBright, opacity: checking ? 0.7 : 1 }}>
-        {checking ? "Checking…" : "Unlock"}
-      </button>
+
+      {status === "sent" || status === "verifying" ? (
+        <>
+          <p style={{ color: C.mist, fontSize: 13, margin: "0 0 20px", textAlign: "center" }}>
+            Check your email — tap the link, or enter the code below.
+          </p>
+          <form onSubmit={handleVerifyCode} style={{ width: "100%", maxWidth: 220, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <input
+              type="text"
+              inputMode="numeric"
+              required
+              autoFocus
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="12345678"
+              style={{ width: "100%", boxSizing: "border-box", textAlign: "center", fontSize: 20, letterSpacing: 4, padding: "12px", borderRadius: 12, border: `1.5px solid ${errorMessage ? C.danger : C.mist}`, marginBottom: 12, outline: "none" }}
+            />
+            {errorMessage && <p style={{ color: "#E7A08F", fontSize: 12.5, margin: "0 0 12px", textAlign: "center" }}>{errorMessage}</p>}
+            <button type="submit" disabled={status === "verifying"} style={{ ...btnPrimary, width: "100%", background: C.greenBright, opacity: status === "verifying" ? 0.7 : 1 }}>
+              {status === "verifying" ? "Verifying…" : "Verify code"}
+            </button>
+            <button type="button" onClick={handleUseDifferentEmail} style={{ ...linkBtn, color: C.mist, marginTop: 14 }}>Use a different email</button>
+          </form>
+        </>
+      ) : (
+        <>
+          <p style={{ color: C.mist, fontSize: 13, margin: "0 0 24px", textAlign: "center" }}>Sign in with your work email to manage notices, forms and info.</p>
+          <form onSubmit={handleSendCode} style={{ width: "100%", maxWidth: 220, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@treetopscaravanpark.co.uk"
+              style={{ width: "100%", boxSizing: "border-box", textAlign: "center", fontSize: 15, padding: "12px", borderRadius: 12, border: `1.5px solid ${status === "error" ? C.danger : C.mist}`, marginBottom: 12, outline: "none" }}
+            />
+            {status === "error" && <p style={{ color: "#E7A08F", fontSize: 12.5, margin: "0 0 12px", textAlign: "center" }}>{errorMessage}</p>}
+            <button type="submit" disabled={status === "sending"} style={{ ...btnPrimary, width: "100%", background: C.greenBright, opacity: status === "sending" ? 0.7 : 1 }}>
+              {status === "sending" ? "Sending…" : "Send sign-in link & code"}
+            </button>
+          </form>
+        </>
+      )}
       <button onClick={onCancel} style={{ ...linkBtn, color: C.mist, marginTop: 18 }}>Back to app</button>
     </div>
   );
@@ -2787,6 +2852,77 @@ function AdminStats() {
   );
 }
 
+// Lists current hub_admins and lets one invite another by email, via the
+// invite-hub-admin Edge Function (needs the service role, so it can't be
+// done directly from the browser with the anon key).
+function AdminUsers() {
+  const [admins, setAdmins] = useState([]);
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [status, setStatus] = useState("idle"); // idle | sending | error
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const refresh = async () => {
+    const { data } = await supabase.from("hub_admins").select("id, email, display_name, created_at").order("created_at");
+    setAdmins(data || []);
+  };
+
+  useEffect(() => { refresh(); }, []);
+
+  async function handleInvite(e) {
+    e.preventDefault();
+    setStatus("sending");
+    setErrorMessage("");
+    const { data: { session } } = await supabase.auth.getSession();
+    let result;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/invite-hub-admin`, {
+        method: "POST",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, displayName }),
+      });
+      result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || "Invite failed");
+    } catch (err) {
+      setStatus("error");
+      setErrorMessage(err.message);
+      return;
+    }
+    setStatus("idle");
+    setEmail("");
+    setDisplayName("");
+    refresh();
+  }
+
+  return (
+    <div>
+      <SectionLabel>Admin users</SectionLabel>
+      <div style={{ ...card, marginBottom: 20 }}>
+        {admins.map((a) => (
+          <div key={a.id} style={{ padding: "6px 0", borderBottom: `1px solid ${C.sandDeep}`, fontSize: 13.5 }}>
+            <div style={{ fontWeight: 700, color: C.ink }}>{a.display_name || a.email}</div>
+            {a.display_name && <div style={{ color: C.bark, fontSize: 11.5 }}>{a.email}</div>}
+          </div>
+        ))}
+        {admins.length === 0 && <p style={{ color: C.bark, fontSize: 13, margin: 0 }}>Loading…</p>}
+
+        <form onSubmit={handleInvite} style={{ marginTop: 14 }}>
+          <AdminInput label="Invite by email" value={email} onChange={setEmail} placeholder="colleague@treetopscaravanpark.co.uk" type="email" />
+          <AdminInput label="Name (optional)" value={displayName} onChange={setDisplayName} />
+          {status === "error" && <p style={{ color: C.danger, fontSize: 12.5, margin: "0 0 10px" }}>{errorMessage}</p>}
+          <button type="submit" disabled={status === "sending"} style={{ ...btnPrimary, opacity: status === "sending" ? 0.7 : 1 }}>
+            {status === "sending" ? "Inviting…" : "Invite admin"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function AdminSettings({ settings, setSettings }) {
   const update = (patch) => {
     const next = { ...settings, ...patch };
@@ -2832,6 +2968,7 @@ function AdminSettings({ settings, setSettings }) {
           Only used when two or more notices are starred as featured on Home — guests can always swipe (or tap a dot) regardless of this setting.
         </p>
       </div>
+      <AdminUsers />
     </div>
   );
 }
@@ -2945,7 +3082,7 @@ export default function TreeTopsHubApp() {
   }
 
   if (adminMode === "gate") {
-    return frame(<AdminGate onSuccess={() => setAdminMode("portal")} onCancel={() => setAdminMode(false)} />);
+    return frame(<AdminLogin onSuccess={() => setAdminMode("portal")} onCancel={() => setAdminMode(false)} />);
   }
 
   if (adminMode === "portal") {
@@ -2959,7 +3096,7 @@ export default function TreeTopsHubApp() {
     else if (adminTab === "contractors") panel = <AdminContractors contractors={contractors} setContractors={setContractors} categories={contractorCategories} setCategories={setContractorCategories} />;
     else if (adminTab === "emergency") panel = <AdminEmergencyContacts contacts={emergencyContacts} setContacts={setEmergencyContacts} />;
     else panel = <AdminSettings settings={settings} setSettings={setSettings} />;
-    return frame(<AdminShell tab={adminTab} setTab={setAdminTab} onExit={() => setAdminMode(false)}>{panel}</AdminShell>);
+    return frame(<AdminShell tab={adminTab} setTab={setAdminTab} onExit={() => { supabase.auth.signOut(); setAdminMode(false); }}>{panel}</AdminShell>);
   }
 
   let content;
