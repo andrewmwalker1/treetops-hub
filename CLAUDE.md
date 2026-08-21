@@ -54,15 +54,21 @@ things to check or do automatically, every session.
 
 ## Current known state
 
-- v1.8.0 in progress: adds a per-device anonymous ID (`getDeviceId()`,
-  localStorage), active-user / notification-subscriber / opt-in-rate
-  stats, and a busiest-times heatmap to Admin → Stats. Migration file:
-  `03-device-stats.sql` — **not yet run against the live database as of
-  this writing; confirm before assuming it's applied.**
-- That migration reconstructs `upsert_push_subscription` and the
-  `push_subscriptions` table shape from how `App.jsx` calls them, since
-  the original migration file wasn't available when it was written.
-  Diff it against the actual current function definition in the
-  Supabase SQL editor before running it, in case column names differ.
+- `03-device-stats.sql` is confirmed applied to the live database (checked
+  2026-08-21: `device_id` columns and `get_admin_stats()` exist and are
+  populated with real data). The old 3-arg `upsert_push_subscription`
+  overload is still there alongside the new 4-arg one — Postgres treats a
+  different parameter list as a new overload, not a replace, so the old
+  one is harmless dead code sitting in the schema, safe to drop whenever
+  convenient.
+- 2026-08-21: fixed a real bug in Admin → Stats — "Opens (last 7 days)"
+  and "Opens per day" were silently stuck at 0 because this project's
+  Supabase REST settings cap responses at 1000 rows no matter what
+  `limit=` the client asks for, and `loadEvents()` was sorting
+  `order=ts.asc`, so once `usage_events` passed 1000 rows the *oldest*
+  1000 got returned and every recent row was silently dropped. Server-
+  side stats (`get_admin_stats()`, the heatmap) were unaffected since
+  they query the full table directly. Fixed by sorting `ts.desc` instead
+  — nothing downstream depends on array order. v1.14.1.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).

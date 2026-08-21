@@ -7,6 +7,7 @@ import {
   Compass, Search, Globe, PawPrint, X, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle,
   CloudRain, CloudSnow, CloudLightning, Languages, Navigation, Wrench,
   Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload, Users, Paperclip,
+  Share, MoreVertical,
 } from "lucide-react";
 
 // ---- Brand tokens ----
@@ -31,8 +32,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.14.0";
-const BUILD_DATE = "6 Aug 2026";
+const APP_VERSION = "1.14.1";
+const BUILD_DATE = "21 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -365,13 +366,18 @@ async function logEvent(type, label) {
 
 const MAX_LOADED_EVENTS = 5000;
 
-// Reads events back for the Admin → Stats screen. Ordered oldest-first to
-// match how the old app_data blob was built up (append-only), so the
-// day-bucketing/ranking logic below doesn't need to change.
+// Reads events back for the Admin → Stats screen. This project's Supabase
+// settings cap REST responses at 1000 rows regardless of the limit= we ask
+// for, so once usage_events passes that count, *some* rows always get left
+// out -- order.desc means it's the oldest ones, not the ones "last 7 days"
+// stats actually need. (Previously ordered ts.asc, which silently zeroed
+// out Opens (last 7 days)/Opens per day once the table passed 1000 rows,
+// since those are computed from this array, not the server-side RPC.)
+// Downstream (day-bucketing, rankEvents counts) doesn't care about order.
 async function loadEvents() {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/usage_events?select=type,label,ts&order=ts.asc&limit=${MAX_LOADED_EVENTS}`,
+      `${SUPABASE_URL}/rest/v1/usage_events?select=type,label,ts&order=ts.desc&limit=${MAX_LOADED_EVENTS}`,
       {
         headers: {
           apikey: SUPABASE_ANON_KEY,
@@ -2796,9 +2802,10 @@ function AdminStats() {
       </div>
 
       <SectionLabel>Opens per day</SectionLabel>
-      <div style={{ ...card, display: "flex", alignItems: "flex-end", gap: 8, height: 90, marginBottom: 18 }}>
+      <div style={{ ...card, display: "flex", alignItems: "flex-end", gap: 8, height: 104, marginBottom: 18 }}>
         {dayBuckets.map((d) => (
           <div key={d.label} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: C.ink }}>{d.count}</span>
             <div style={{ width: "100%", height: `${Math.max(4, (d.count / maxDay) * 54)}px`, background: C.green, borderRadius: 4 }} />
             <span style={{ fontSize: 9.5, color: C.bark }}>{d.label}</span>
           </div>
@@ -2989,6 +2996,68 @@ const TABS = [
   { key: "more", label: "More", icon: MoreHorizontal },
 ];
 
+// Nudges guests using the Hub as a plain browser tab to add it to their
+// home screen instead -- install flow differs enough between iOS Safari
+// and Android Chrome that generic wording wouldn't help either one, and
+// desktop browsers get skipped entirely since "home screen" isn't a
+// concept there. Dismissal is remembered per device (same pattern as
+// DEVICE_ID_KEY) so it only asks once, not on every visit.
+const INSTALL_DISMISSED_KEY = "hub_install_dismissed";
+function InstallBanner() {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(INSTALL_DISMISSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [isStandalone, setIsStandalone] = useState(
+    () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia("(display-mode: standalone)");
+    const check = () => setIsStandalone(mq.matches || navigator.standalone === true);
+    mq.addEventListener("change", check);
+    return () => mq.removeEventListener("change", check);
+  }, []);
+
+  if (isStandalone || dismissed) return null;
+
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua);
+  const isAndroid = /Android/.test(ua);
+  if (!isIOS && !isAndroid) return null;
+
+  function dismiss() {
+    setDismissed(true);
+    try {
+      localStorage.setItem(INSTALL_DISMISSED_KEY, "1");
+    } catch {}
+  }
+
+  return (
+    <div style={{ ...card, margin: "10px 12px 0", display: "flex", alignItems: "flex-start", gap: 10 }}>
+      {isIOS ? (
+        <Share size={17} color={C.green} style={{ flexShrink: 0, marginTop: 1 }} />
+      ) : (
+        <MoreVertical size={17} color={C.green} style={{ flexShrink: 0, marginTop: 1 }} />
+      )}
+      <div style={{ flex: 1 }}>
+        <p style={{ margin: 0, fontSize: 12.5, fontWeight: 700, color: C.ink }}>Install Tree Tops Hub</p>
+        <p style={{ margin: "3px 0 0", fontSize: 11.5, color: C.bark, lineHeight: 1.4 }}>
+          {isIOS
+            ? 'Tap the Share icon in Safari, then "Add to Home Screen" — for faster access and notifications.'
+            : 'Tap ⋮ (menu) in Chrome, then "Add to Home screen" or "Install app" — for faster access and notifications.'}
+        </p>
+      </div>
+      <button onClick={dismiss} aria-label="Dismiss" style={{ background: "none", border: "none", cursor: "pointer", padding: 2, flexShrink: 0 }}>
+        <X size={15} color={C.bark} />
+      </button>
+    </div>
+  );
+}
+
 export default function TreeTopsHubApp() {
   const [tab, setTab] = useState("home");
   const [activeFormId, setActiveFormId] = useState(null);
@@ -3114,6 +3183,7 @@ export default function TreeTopsHubApp() {
 
   return frame(
     <>
+      <InstallBanner />
       {content}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: C.white, borderTop: `1.5px solid ${C.sandDeep}`, display: "flex", padding: "8px 6px 12px" }}>
         {TABS.map((t) => {
