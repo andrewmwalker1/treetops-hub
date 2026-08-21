@@ -95,5 +95,12 @@ things to check or do automatically, every session.
   ParkMan2 (stale artwork), and `OP-A1`/`OP-D1` are actually staff/office
   buildings, not guest pitches -- worth reconciling before this is
   treated as fully authoritative.
+- 2026-08-21, v1.15.1: first live check showed all ~205 pins at once,
+  which Andy correctly called unusable. Changed `ParkMapScreen` to show
+  no pins by default -- only the searched-for pitch gets one, and the
+  area chips now double as a disambiguation shortcut (pick "Old Park"
+  first, then a bare "F1" resolves straight to OP-F1 instead of asking).
+  Tap-to-select on the map is gone as a result (nothing to tap when
+  nothing's shown) -- search is now the only way in, by design.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).

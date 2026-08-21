@@ -32,7 +32,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.15.0";
+const APP_VERSION = "1.15.1";
 const BUILD_DATE = "21 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -1016,11 +1016,18 @@ function ParkMapScreen() {
     }
     const bare = q.match(/^([A-Z]+)0*(\d+)$/);
     const bareCode = bare ? `${bare[1]}${bare[2]}` : q;
-    const matches = (pitches || []).filter((p) => p.code.toUpperCase() === bareCode);
+    let matches = (pitches || []).filter((p) => p.code.toUpperCase() === bareCode);
+    // The area filter chips double as a disambiguation shortcut: if a bare
+    // code is ambiguous but an area is already selected, prefer that one
+    // instead of always asking.
+    if (matches.length > 1 && activeZone !== "all") {
+      const narrowed = matches.filter((p) => p.zone === activeZone);
+      if (narrowed.length === 1) matches = narrowed;
+    }
     if (matches.length === 1) {
       selectPitch(matches[0].uid);
     } else if (matches.length > 1) {
-      setSearchMsg(`${bareCode} exists in more than one area — try ${matches.map((m) => m.fullCode).join(", ")}.`);
+      setSearchMsg(`${bareCode} exists in more than one area — try ${matches.map((m) => m.fullCode).join(", ")}, or pick an area below first.`);
     } else {
       setSearchMsg(`No pitch called "${raw}" found.`);
     }
@@ -1035,7 +1042,7 @@ function ParkMapScreen() {
   return (
     <div style={{ padding: "20px 20px 100px", background: C.sand, minHeight: "100%" }}>
       <h2 style={{ fontFamily: displayFont, fontSize: 22, color: C.ink, margin: "0 0 4px" }}>Find your pitch</h2>
-      <p style={{ fontSize: 13, color: C.bark, margin: "0 0 16px" }}>Tap a pin, search your pitch number, or filter by area.</p>
+      <p style={{ fontSize: 13, color: C.bark, margin: "0 0 16px" }}>Search your pitch number below — pick an area first if you know it, to help tell apart pitches that share a number.</p>
 
       <form onSubmit={doSearch} style={{ position: "relative", marginBottom: 12 }}>
         <Search size={16} color={C.bark} style={{ position: "absolute", left: 12, top: 12 }} />
@@ -1082,23 +1089,18 @@ function ParkMapScreen() {
             style={{ position: "absolute", top: 0, left: 0, width: "100%", transformOrigin: "0 0", transition: "transform 0.6s cubic-bezier(0.22,1,0.36,1)", transform: `scale(${transform.scale}) translate(${transform.tx}px, ${transform.ty}px)` }}
           >
             <img src="/park-map.png" alt="Tree Tops Caravan Park map" style={{ display: "block", width: "100%", height: "auto", userSelect: "none" }} />
-            {pitches.map((p) => {
-              const match = activeZone === "all" || p.zone === activeZone;
-              const isSelected = selected === p.uid;
-              return (
-                <div
-                  key={p.uid}
-                  onClick={() => selectPitch(p.uid)}
-                  style={{
-                    position: "absolute", left: `${p.x}%`, top: `${p.y}%`, width: 22, height: 27, marginLeft: -11, marginTop: -25,
-                    cursor: "pointer", opacity: match ? 1 : 0.15, pointerEvents: match ? "auto" : "none",
-                    filter: isSelected ? "drop-shadow(0 0 4px rgba(255,255,255,0.9))" : "drop-shadow(0 2px 3px rgba(10,30,20,0.45))",
-                    transition: "opacity 0.2s ease",
-                  }}
-                  dangerouslySetInnerHTML={{ __html: parkMapPinSvg(PARK_MAP_ZONES[p.zone].color) }}
-                />
-              );
-            })}
+            {/* Only the searched-for pitch gets a pin. All ~205 at once made
+                the map unreadable -- this is a lookup tool, not a directory
+                of every dot at a glance. */}
+            {selectedPitch && (
+              <div
+                style={{
+                  position: "absolute", left: `${selectedPitch.x}%`, top: `${selectedPitch.y}%`, width: 26, height: 32, marginLeft: -13, marginTop: -29,
+                  filter: "drop-shadow(0 0 4px rgba(255,255,255,0.9))",
+                }}
+                dangerouslySetInnerHTML={{ __html: parkMapPinSvg(PARK_MAP_ZONES[selectedPitch.zone].color) }}
+              />
+            )}
           </div>
         )}
         {selectedPitch && (
