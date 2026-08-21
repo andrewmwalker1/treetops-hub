@@ -102,5 +102,10 @@ things to check or do automatically, every session.
   first, then a bare "F1" resolves straight to OP-F1 instead of asking).
   Tap-to-select on the map is gone as a result (nothing to tap when
   nothing's shown) -- search is now the only way in, by design.
+- 2026-08-21, v1.15.2: dropped "Walk from Reception" from the pitch card
+  -- Andy flagged it as inaccurate (it was straight-line distance to
+  Reception divided by a guessed walking speed, never measured). The
+  `walk` field is still sitting unused in `public/pitches.json`; harmless
+  as dead data, fine to drop next time that file gets regenerated.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).

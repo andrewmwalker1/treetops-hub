@@ -32,7 +32,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.15.1";
+const APP_VERSION = "1.15.2";
 const BUILD_DATE = "21 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -1123,13 +1123,9 @@ function ParkMapScreen() {
               <X size={14} color={C.ink} />
             </button>
           </div>
-          <p style={{ fontFamily: displayFont, fontSize: 22, color: C.ink, margin: "0 0 10px" }}>
+          <p style={{ fontFamily: displayFont, fontSize: 22, color: C.ink, margin: 0 }}>
             {selectedPitch.zone === "landmark" ? selectedPitch.code : `Pitch ${selectedPitch.fullCode}`}
           </p>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.bark, borderTop: `1px solid ${C.sandDeep}`, paddingTop: 8 }}>
-            <span>Walk from Reception</span>
-            <span style={{ color: C.ink, fontWeight: 600 }}>{selectedPitch.walk}</span>
-          </div>
         </div>
       )}
     </div>
