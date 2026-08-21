@@ -32,7 +32,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.14.1";
+const APP_VERSION = "1.14.2";
 const BUILD_DATE = "21 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -373,7 +373,7 @@ const MAX_LOADED_EVENTS = 5000;
 // stats actually need. (Previously ordered ts.asc, which silently zeroed
 // out Opens (last 7 days)/Opens per day once the table passed 1000 rows,
 // since those are computed from this array, not the server-side RPC.)
-// Downstream (day-bucketing, rankEvents counts) doesn't care about order.
+// Downstream day-bucketing doesn't care about order.
 async function loadEvents() {
   try {
     const res = await fetch(
@@ -402,6 +402,14 @@ async function loadAdminStats() {
     active_devices_7d: 0,
     notif_devices_7d: 0,
     heatmap: [],
+    opens_total: 0,
+    opens_standalone: 0,
+    game_plays_whack_a_squirrel: 0,
+    game_plays_poop_patrol: 0,
+    top_calls: [],
+    top_navs: [],
+    top_websites: [],
+    top_forms: [],
   };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_admin_stats`, {
@@ -2684,14 +2692,6 @@ function StatCard({ icon: Icon, label, value }) {
   );
 }
 
-function rankEvents(events, types, limit = 8) {
-  const counts = {};
-  events.filter((e) => types.includes(e.type)).forEach((e) => {
-    counts[e.label] = (counts[e.label] || 0) + 1;
-  });
-  return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, limit);
-}
-
 function RankList({ title, rows, emptyText }) {
   return (
     <div style={{ marginBottom: 18 }}>
@@ -2750,9 +2750,14 @@ function AdminStats() {
     return `rgb(${rgb.join(",")})`;
   }
 
+  // All-time totals (standalone %, game plays, rank lists below) come from
+  // stats (the get_admin_stats RPC, queried over the full table) rather
+  // than this events array, which is capped at 1000 rows server-side --
+  // fine for the last-7-days numbers just below, but silently wrong for
+  // anything meant to cover the whole history once usage_events outgrows
+  // that cap. See 04-full-table-stats.sql.
   const opens = events.filter((e) => e.type === "app_open");
-  const standalone = opens.filter((e) => e.label === "standalone").length;
-  const standalonePct = opens.length ? Math.round((standalone / opens.length) * 100) : 0;
+  const standalonePct = stats.opens_total ? Math.round((stats.opens_standalone / stats.opens_total) * 100) : 0;
 
   const now = Date.now();
   const sevenDaysAgo = now - 7 * 24 * 60 * 60 * 1000;
@@ -2768,12 +2773,12 @@ function AdminStats() {
   });
   const maxDay = Math.max(1, ...dayBuckets.map((d) => d.count));
 
-  const calls = rankEvents(events, ["directory_call", "contractor_call", "emergency_call"]);
-  const navs = rankEvents(events, ["directory_navigate", "contractor_navigate", "emergency_navigate"]);
-  const websites = rankEvents(events, ["directory_website", "contractor_website"]);
-  const forms = rankEvents(events, ["form_launch"]);
-  const gamePlays = events.filter((e) => e.type === "game_play" && e.label === "Whack-a-Squirrel").length;
-  const poopPatrolPlays = events.filter((e) => e.type === "game_play" && e.label === "Poop Patrol").length;
+  const calls = stats.top_calls;
+  const navs = stats.top_navs;
+  const websites = stats.top_websites;
+  const forms = stats.top_forms;
+  const gamePlays = stats.game_plays_whack_a_squirrel;
+  const poopPatrolPlays = stats.game_plays_poop_patrol;
 
   return (
     <div>

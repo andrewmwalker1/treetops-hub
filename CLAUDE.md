@@ -70,5 +70,15 @@ things to check or do automatically, every session.
   side stats (`get_admin_stats()`, the heatmap) were unaffected since
   they query the full table directly. Fixed by sorting `ts.desc` instead
   — nothing downstream depends on array order. v1.14.1.
+- 2026-08-21 (same day, v1.14.2): the *un*-windowed Stats numbers had the
+  same root problem — "Opened from home screen %", both game play counts,
+  and the four rank lists (most-called/navigated/visited, form launches)
+  were computed client-side over the same 1000-row-capped `events` array
+  with no time filter at all, so they were never true all-time totals,
+  just whatever fit in the loaded window. Moved them into
+  `get_admin_stats()` instead (`04-full-table-stats.sql`), same pattern as
+  `active_devices_7d`/heatmap. `rankEvents()` is now dead and was removed.
+  "Opens (last 7 days)"/"Opens per day" stay client-side — a 7-day window
+  is comfortably under the 1000-row cap at current volume.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
