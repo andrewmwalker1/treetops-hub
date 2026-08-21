@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 21 Aug 2026 (App.jsx APP_VERSION 1.14.2)
+**Last updated:** 21 Aug 2026 (App.jsx APP_VERSION 1.15.0)
 
 ## Who you're talking to
 

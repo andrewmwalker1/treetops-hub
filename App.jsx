@@ -7,7 +7,7 @@ import {
   Compass, Search, Globe, PawPrint, X, Sun, CloudSun, Cloud, CloudFog, CloudDrizzle,
   CloudRain, CloudSnow, CloudLightning, Languages, Navigation, Wrench,
   Clock, Stethoscope, TrendingUp, Smartphone, BarChart3, Upload, Users, Paperclip,
-  Share, MoreVertical,
+  Share, MoreVertical, Map,
 } from "lucide-react";
 
 // ---- Brand tokens ----
@@ -32,7 +32,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.14.2";
+const APP_VERSION = "1.15.0";
 const BUILD_DATE = "21 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -913,6 +913,222 @@ function DirectoryScreen({ directory, categories }) {
         <EmptyState text="No matches — try a different search or category." />
       ) : (
         filtered.map((e) => <DirectoryEntryCard key={e.id} entry={e} categories={categories} />)
+      )}
+    </div>
+  );
+}
+
+// Pitch positions are static, pre-digitized data (see
+// .claude/skills/park-map-digitization in ParkMan2 for how) -- fetched
+// from a public JSON asset rather than baked into the bundle, matching
+// how the map image itself is a plain public asset, not inlined.
+// x/y are percentages of the map image's own box, so they stay correct
+// regardless of how large the image renders.
+const PARK_MAP_ZONES = {
+  ynas: { label: "Ynys Hir", prefix: "YH", color: "#4A8FC7" },
+  parc: { label: "Parc Newydd", prefix: "PN", color: "#DE9138" },
+  old: { label: "Old Park", prefix: "OP", color: "#6E8F3A" },
+  orchard: { label: "Orchard Meadow", prefix: "OM", color: "#8C2C3B" },
+  landmark: { label: "Reception", prefix: null, color: C.gold },
+};
+
+function parkMapPinSvg(color) {
+  return `<svg viewBox="0 0 26 32" width="22" height="27">
+    <path d="M13 0C6 0 0 5.8 0 13c0 9 13 19 13 19s13-10 13-19C26 5.8 20 0 13 0z" fill="${color}" stroke="rgba(10,30,20,0.35)" stroke-width="1"/>
+    <circle cx="13" cy="13" r="5" fill="rgba(255,255,255,0.92)"/>
+  </svg>`;
+}
+
+function ParkMapScreen() {
+  const [pitches, setPitches] = useState(null); // null = loading
+  const [activeZone, setActiveZone] = useState("all");
+  const [selected, setSelected] = useState(null); // uid string
+  const [query, setQuery] = useState("");
+  const [searchMsg, setSearchMsg] = useState("");
+  const [transform, setTransform] = useState({ scale: 1, tx: 0, ty: 0 });
+  const viewportRef = useRef(null);
+  const stageRef = useRef(null);
+
+  useEffect(() => {
+    fetch("/pitches.json")
+      .then((res) => res.json())
+      .then((rows) => {
+        const withIds = rows.map((p) => {
+          const meta = PARK_MAP_ZONES[p.zone];
+          const prefix = meta.prefix;
+          const fullCode = prefix ? `${prefix}-${p.code}` : p.code;
+          return { ...p, prefix, fullCode, uid: fullCode.toLowerCase() };
+        });
+        setPitches(withIds);
+      })
+      .catch(() => setPitches([]));
+  }, []);
+
+  const byUid = {};
+  (pitches || []).forEach((p) => { byUid[p.uid] = p; });
+
+  function zoomTo(p) {
+    if (!p || !viewportRef.current || !stageRef.current) {
+      setTransform({ scale: 1, tx: 0, ty: 0 });
+      return;
+    }
+    const scale = 2.6;
+    const vpW = viewportRef.current.clientWidth;
+    const vpH = viewportRef.current.clientHeight;
+    const stageW = stageRef.current.clientWidth;
+    const stageH = stageRef.current.clientHeight;
+    const px = (p.x / 100) * stageW;
+    const py = (p.y / 100) * stageH;
+    setTransform({ scale, tx: (vpW / 2 - px * scale) / scale, ty: (vpH / 2 - py * scale) / scale });
+  }
+
+  function selectPitch(uid) {
+    const p = byUid[uid.toLowerCase()];
+    if (!p) return;
+    setSelected(p.uid);
+    zoomTo(p);
+    setSearchMsg("");
+    logEvent("park_map_select", p.fullCode);
+  }
+
+  function closeSelection() {
+    setSelected(null);
+    zoomTo(null);
+  }
+
+  function doSearch(e) {
+    e.preventDefault();
+    const raw = query.trim();
+    if (!raw) return;
+    const q = raw.toUpperCase().replace(/\s+/g, "");
+
+    if (q === "RECEPTION") {
+      selectPitch("reception");
+      return;
+    }
+    const prefixed = q.match(/^(YH|PN|OP|OM)-?([A-Z]+)0*(\d+)$/);
+    if (prefixed) {
+      const [, area, letters, digits] = prefixed;
+      const uid = `${area}-${letters}${digits}`.toLowerCase();
+      if (byUid[uid]) { selectPitch(uid); return; }
+      setSearchMsg(`No ${area}-${letters}${digits} found.`);
+      return;
+    }
+    const bare = q.match(/^([A-Z]+)0*(\d+)$/);
+    const bareCode = bare ? `${bare[1]}${bare[2]}` : q;
+    const matches = (pitches || []).filter((p) => p.code.toUpperCase() === bareCode);
+    if (matches.length === 1) {
+      selectPitch(matches[0].uid);
+    } else if (matches.length > 1) {
+      setSearchMsg(`${bareCode} exists in more than one area — try ${matches.map((m) => m.fullCode).join(", ")}.`);
+    } else {
+      setSearchMsg(`No pitch called "${raw}" found.`);
+    }
+  }
+
+  const selectedPitch = selected ? byUid[selected] : null;
+  const zoneOptions = [
+    { key: "all", label: "All areas" },
+    ...Object.entries(PARK_MAP_ZONES).filter(([k]) => k !== "landmark").map(([key, z]) => ({ key, label: z.label, color: z.color })),
+  ];
+
+  return (
+    <div style={{ padding: "20px 20px 100px", background: C.sand, minHeight: "100%" }}>
+      <h2 style={{ fontFamily: displayFont, fontSize: 22, color: C.ink, margin: "0 0 4px" }}>Find your pitch</h2>
+      <p style={{ fontSize: 13, color: C.bark, margin: "0 0 16px" }}>Tap a pin, search your pitch number, or filter by area.</p>
+
+      <form onSubmit={doSearch} style={{ position: "relative", marginBottom: 12 }}>
+        <Search size={16} color={C.bark} style={{ position: "absolute", left: 12, top: 12 }} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search — try PN-B1 or E9..."
+          style={{ width: "100%", boxSizing: "border-box", padding: "11px 12px 11px 36px", borderRadius: 12, border: `1.5px solid ${C.sandDeep}`, background: C.white, fontSize: 14, fontFamily: bodyFont, color: C.ink, outline: "none" }}
+        />
+      </form>
+      {searchMsg && <p style={{ fontSize: 12, color: C.danger, margin: "0 0 10px" }}>{searchMsg}</p>}
+
+      <div style={{ display: "flex", gap: 7, overflowX: "auto", marginBottom: 16, paddingBottom: 2 }}>
+        {zoneOptions.map((z) => {
+          const active = activeZone === z.key;
+          return (
+            <button
+              key={z.key}
+              onClick={() => setActiveZone(z.key)}
+              style={{
+                flexShrink: 0, display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 20, fontSize: 12.5, fontWeight: 700, cursor: "pointer",
+                border: `1.5px solid ${active ? C.green : C.sandDeep}`,
+                background: active ? C.green : C.white,
+                color: active ? C.white : C.ink,
+                whiteSpace: "nowrap",
+              }}
+            >
+              {z.color && <span style={{ width: 8, height: 8, borderRadius: "50%", background: z.color, flexShrink: 0 }} />}
+              {z.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        ref={viewportRef}
+        style={{ position: "relative", aspectRatio: "1754 / 1240", borderRadius: 14, overflow: "hidden", background: "#3C5A3E", marginBottom: selectedPitch ? 12 : 18, border: `1.5px solid ${C.sandDeep}` }}
+      >
+        {pitches === null ? (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: C.sand, fontSize: 13 }}>Loading map…</div>
+        ) : (
+          <div
+            ref={stageRef}
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", transformOrigin: "0 0", transition: "transform 0.6s cubic-bezier(0.22,1,0.36,1)", transform: `scale(${transform.scale}) translate(${transform.tx}px, ${transform.ty}px)` }}
+          >
+            <img src="/park-map.png" alt="Tree Tops Caravan Park map" style={{ display: "block", width: "100%", height: "auto", userSelect: "none" }} />
+            {pitches.map((p) => {
+              const match = activeZone === "all" || p.zone === activeZone;
+              const isSelected = selected === p.uid;
+              return (
+                <div
+                  key={p.uid}
+                  onClick={() => selectPitch(p.uid)}
+                  style={{
+                    position: "absolute", left: `${p.x}%`, top: `${p.y}%`, width: 22, height: 27, marginLeft: -11, marginTop: -25,
+                    cursor: "pointer", opacity: match ? 1 : 0.15, pointerEvents: match ? "auto" : "none",
+                    filter: isSelected ? "drop-shadow(0 0 4px rgba(255,255,255,0.9))" : "drop-shadow(0 2px 3px rgba(10,30,20,0.45))",
+                    transition: "opacity 0.2s ease",
+                  }}
+                  dangerouslySetInnerHTML={{ __html: parkMapPinSvg(PARK_MAP_ZONES[p.zone].color) }}
+                />
+              );
+            })}
+          </div>
+        )}
+        {selectedPitch && (
+          <button
+            onClick={closeSelection}
+            style={{ position: "absolute", top: 10, right: 10, background: "rgba(10,30,20,0.72)", color: C.white, border: "none", borderRadius: 9, padding: "6px 11px", fontSize: 11.5, fontWeight: 600, cursor: "pointer" }}
+          >
+            &#8634; Whole park
+          </button>
+        )}
+      </div>
+
+      {selectedPitch && (
+        <div style={{ ...card, marginBottom: 18 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 700, color: C.white, background: PARK_MAP_ZONES[selectedPitch.zone].color, padding: "3px 9px", borderRadius: 20 }}>
+              {PARK_MAP_ZONES[selectedPitch.zone].label}
+            </span>
+            <button onClick={closeSelection} style={{ background: C.sandDeep, border: "none", width: 26, height: 26, borderRadius: 8, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <X size={14} color={C.ink} />
+            </button>
+          </div>
+          <p style={{ fontFamily: displayFont, fontSize: 22, color: C.ink, margin: "0 0 10px" }}>
+            {selectedPitch.zone === "landmark" ? selectedPitch.code : `Pitch ${selectedPitch.fullCode}`}
+          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, color: C.bark, borderTop: `1px solid ${C.sandDeep}`, paddingTop: 8 }}>
+            <span>Walk from Reception</span>
+            <span style={{ color: C.ink, fontWeight: 600 }}>{selectedPitch.walk}</span>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2998,6 +3214,7 @@ const TABS = [
   { key: "forms", label: "Forms", icon: ClipboardList },
   { key: "directory", label: "Explore", icon: Compass },
   { key: "contractors", label: "Contractors", icon: Wrench },
+  { key: "parkmap", label: "Map", icon: Map },
   { key: "more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -3181,6 +3398,7 @@ export default function TreeTopsHubApp() {
     content = form ? <FormLinkScreen form={form} onBack={() => setActiveFormId(null)} /> : <FormsListScreen go={go} forms={forms} />;
   } else if (tab === "directory") content = <DirectoryScreen directory={directory} categories={directoryCategories} />;
   else if (tab === "contractors") content = <ContractorsScreen contractors={contractors} categories={contractorCategories} />;
+  else if (tab === "parkmap") content = <ParkMapScreen />;
   else if (tab === "emergency") content = <EmergencyContactsScreen contacts={emergencyContacts} contractors={contractors} contractorCategories={contractorCategories} onBack={() => go("home")} />;
   else if (tab === "whack-a-squirrel") content = <WhackASquirrelScreen onBack={() => go("more")} />;
   else if (tab === "poop-patrol") content = <PoopPatrolScreen onBack={() => go("more")} />;
