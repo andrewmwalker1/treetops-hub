@@ -32,8 +32,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.15.2";
-const BUILD_DATE = "21 Aug 2026";
+const APP_VERSION = "1.15.3";
+const BUILD_DATE = "26 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -2333,6 +2333,20 @@ function AdminDirectoryEntries({ directory, setDirectory, categories }) {
     setDirectory(next);
     saveData("directory", next);
   };
+  // Swaps two items by id rather than raw index, so reordering still makes
+  // sense when a search/category filter is narrowing what's visible.
+  const move = (filteredIndex, direction, filteredList) => {
+    const targetIndex = filteredIndex + direction;
+    if (targetIndex < 0 || targetIndex >= filteredList.length) return;
+    const idA = filteredList[filteredIndex].id;
+    const idB = filteredList[targetIndex].id;
+    const idxA = directory.findIndex((e) => e.id === idA);
+    const idxB = directory.findIndex((e) => e.id === idB);
+    const next = [...directory];
+    [next[idxA], next[idxB]] = [next[idxB], next[idxA]];
+    setDirectory(next);
+    saveData("directory", next);
+  };
 
   const filtered = directory
     .filter((e) => filterCat === "all" || e.categoryId === filterCat)
@@ -2398,14 +2412,21 @@ function AdminDirectoryEntries({ directory, setDirectory, categories }) {
           {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
-      <p style={{ fontSize: 11.5, color: C.bark, margin: "0 0 8px" }}>{filtered.length} shown</p>
-      {filtered.slice(0, 60).map((e) => (
+      <p style={{ fontSize: 11.5, color: C.bark, margin: "0 0 8px" }}>{filtered.length} shown · order here sets the &ldquo;Featured businesses&rdquo; order on the Home screen</p>
+      {(filterCat !== "all" || query.trim()) ? (
+        <p style={{ fontSize: 11, color: C.bark, background: C.sandDeep, padding: "8px 10px", borderRadius: 8, marginBottom: 8 }}>Reordering works while searching or filtering too — it moves items relative to their neighbours in this view.</p>
+      ) : null}
+      {filtered.slice(0, 60).map((e, i) => (
         <AdminListItem
           key={e.id}
           title={e.name}
           subtitle={`${CATEGORY_NAME(categories, e.categoryId)}${e.attachmentUrl ? " · has voucher/leaflet" : ""}`}
           onEdit={() => startEdit(e)}
           onDelete={() => remove(e.id)}
+          onMoveUp={() => move(i, -1, filtered)}
+          onMoveDown={() => move(i, 1, filtered)}
+          disableUp={i === 0}
+          disableDown={i === filtered.length - 1}
           featured={!!e.featured}
           onToggleFeatured={() => toggleFeatured(e.id)}
         />

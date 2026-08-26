@@ -107,5 +107,15 @@ things to check or do automatically, every session.
   Reception divided by a guessed walking speed, never measured). The
   `walk` field is still sitting unused in `public/pitches.json`; harmless
   as dead data, fine to drop next time that file gets regenerated.
+- 2026-08-26, v1.15.3: fixed Admin → Directory's reorder arrows doing
+  nothing -- `AdminDirectoryEntries` never wired `onMoveUp`/`onMoveDown`
+  into `AdminListItem` (the buttons render unconditionally regardless of
+  whether handlers are passed, so they looked live but no-opped on
+  click). Added the same id-based `move()` swap already used by
+  Contractors, filter/search-safe. This isn't just cosmetic: the Home
+  screen's "Featured businesses" list has no sort, so this array order
+  is the only thing controlling display order there (the guest-facing
+  Directory/"Places to explore" screen itself always sorts by `mins`,
+  ignoring array order).
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
