@@ -184,8 +184,13 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 // Public half of the VAPID key pair used for Web Push. Safe to expose —
 // it's the whole point of it. The private half lives only as a Supabase
-// Edge Function secret and is never shipped to the browser.
-const VAPID_PUBLIC_KEY = "BNtmX0wjCozHGVFUV_iT-Cx9s_crCIApDZ038BXb8_Na9UJfBa2Fsqbp42i4d3ip7iDMvwWrJn5LsYegMPH7uVM";
+// Edge Function secret (HUB_VAPID_PRIVATE_KEY) and is never shipped to
+// the browser. Regenerated during the Supabase consolidation (28 Aug
+// 2026) since the original pair was unrecoverable — see
+// SUPABASE-CONSOLIDATION-PLAN.md in the treetops-maintenance repo. Every
+// subscription created against the old key is now dead; subscribeToPush()
+// below detects and silently replaces a stale one.
+const VAPID_PUBLIC_KEY = "BP1z_rkpmxwe5Z0kKsTuFuJfloLu3Zu-mKEaqUEcanw78S4PUq9aTK-h-e-VTIG63DoQywQwuVmAW9D4QHs5U9U";
 
 async function loadData(key, fallback) {
   try {
@@ -253,6 +258,22 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }
 
+// True if an existing PushSubscription was created against the VAPID key
+// this build currently ships (VAPID_PUBLIC_KEY above). A subscription
+// created under a since-replaced key can't receive pushes signed with the
+// new private key -- the push service silently rejects them -- but the
+// browser has no way to know that on its own, so this has to be checked
+// explicitly. Guards against a null applicationServerKey (some browsers
+// return it as null for pre-VAPID subscriptions) by treating that as stale.
+function subscriptionMatchesCurrentKey(sub) {
+  const current = sub?.options?.applicationServerKey;
+  if (!current) return false;
+  const expected = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+  const actual = new Uint8Array(current);
+  if (actual.length !== expected.length) return false;
+  return actual.every((byte, i) => byte === expected[i]);
+}
+
 // Upserts the current push subscription into Supabase. Called both right
 // after a guest opts in, and quietly on every app load (to refresh
 // last_seen_at and catch iOS's occasional silent subscription resets).
@@ -310,6 +331,14 @@ async function subscribeToPush() {
   try {
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
+    if (sub && !subscriptionMatchesCurrentKey(sub)) {
+      // Stale subscription from a since-replaced VAPID key -- unsubscribe
+      // so a fresh one can be created against the current key. The old
+      // row in push_subscriptions is harmless; hub-send-notice-push
+      // already prunes endpoints the push service reports as dead.
+      await sub.unsubscribe();
+      sub = null;
+    }
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
@@ -1403,7 +1432,16 @@ function PushNotificationsToggle() {
       setStatus("denied");
       return;
     }
-    navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription()).then((sub) => {
+    navigator.serviceWorker.ready.then((reg) => reg.pushManager.getSubscription()).then(async (sub) => {
+      if (sub && !subscriptionMatchesCurrentKey(sub)) {
+        // Permission was already granted previously, so re-subscribing
+        // here doesn't need a fresh user gesture -- silently swap in a
+        // working subscription rather than showing "on" for a dead one.
+        setStatus("busy");
+        const ok = await subscribeToPush();
+        setStatus(ok ? "on" : "off");
+        return;
+      }
       setStatus(sub ? "on" : "off");
       if (sub) savePushSubscription(sub); // quietly refresh last_seen_at
     });
