@@ -32,8 +32,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.15.3";
-const BUILD_DATE = "26 Aug 2026";
+const APP_VERSION = "1.16.0";
+const BUILD_DATE = "28 Aug 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -165,15 +165,22 @@ const CATEGORY_NAME = (categories, id) => (categories.find((c) => c.id === id)?.
 // Backed by Supabase: every admin edit is written to a shared online table,
 // so all guests loading the app see the same content — this is real,
 // persistent, shared storage (not per-device).
-const SUPABASE_URL = "https://qkbpsqlrzygcairtidye.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFrYnBzcWxyenlnY2FpcnRpZHllIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMzIzNTYsImV4cCI6MjA5OTYwODM1Nn0.8v079nsYm6YlMBa5X41IP2NK7qP1uozJoGnB74ORWbg";
+const SUPABASE_URL = "https://ozhwgrzlpvfdemmogmav.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im96aHdncnpscHZmZGVtbW9nbWF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwNDA2NDcsImV4cCI6MjEwMDYxNjY0N30.MPfUD5u-NSc6yRXsxd2KHHEI3ogFcekJBY8XI5kCq0Q";
 
 // Used for admin sign-in (magic link/OTP) and for any write that now
 // needs to carry the signed-in admin's session token instead of just the
 // anon key -- see saveData/uploadFileToStorage below. Reuses the same
 // URL/anon key already defined above rather than introducing env vars,
 // consistent with how the rest of this file works.
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+//
+// db.schema: "hub" -- as of the Supabase consolidation (28 Aug 2026),
+// this project is shared with Maintenance and ParkMan2, each in its own
+// Postgres schema (see SUPABASE-CONSOLIDATION-PLAN.md in the
+// treetops-maintenance repo). Hub's tables live in "hub", not "public".
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  db: { schema: "hub" },
+});
 
 // Public half of the VAPID key pair used for Web Push. Safe to expose —
 // it's the whole point of it. The private half lives only as a Supabase
@@ -188,6 +195,7 @@ async function loadData(key, fallback) {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Accept-Profile": "hub",
         },
       }
     );
@@ -255,6 +263,7 @@ async function savePushSubscription(sub) {
       apikey: SUPABASE_ANON_KEY,
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json",
+      "Content-Profile": "hub",
     },
     body: JSON.stringify({
       p_endpoint: sub.endpoint,
@@ -270,12 +279,14 @@ async function savePushSubscription(sub) {
   }
 }
 
-// Calls the send-notice-push Edge Function to push a notice out to every
-// subscribed guest. Used both when a brand-new notice is saved (if the
-// "Notify guests" toggle is on) and from the manual "Notify" button on
-// any existing notice in the admin list.
+// Calls the hub-send-notice-push Edge Function to push a notice out to
+// every subscribed guest. Used both when a brand-new notice is saved (if
+// the "Notify guests" toggle is on) and from the manual "Notify" button
+// on any existing notice in the admin list. Renamed from "send-notice-push"
+// during the Supabase consolidation -- the shared project already runs a
+// function with that name (Maintenance's own).
 async function triggerNoticePush(noticeId, title, body) {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-notice-push`, {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/hub-send-notice-push`, {
     method: "POST",
     headers: {
       apikey: SUPABASE_ANON_KEY,
@@ -352,6 +363,7 @@ async function logEvent(type, label) {
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
         Prefer: "return=minimal",
+        "Content-Profile": "hub",
       },
       body: JSON.stringify([{ type, label, ts: Date.now(), device_id: getDeviceId() }]),
     });
@@ -382,6 +394,7 @@ async function loadEvents() {
         headers: {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Accept-Profile": "hub",
         },
       }
     );
@@ -418,6 +431,7 @@ async function loadAdminStats() {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         "Content-Type": "application/json",
+        "Content-Profile": "hub",
       },
       body: JSON.stringify({}),
     });

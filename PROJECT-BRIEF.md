@@ -1,6 +1,13 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 26 Aug 2026 (App.jsx APP_VERSION 1.15.3)
+**Last updated:** 28 Aug 2026 (App.jsx APP_VERSION 1.16.0)
+
+**Backend note:** as of this update, Hub's Supabase project is
+`ozhwgrzlpvfdemmogmav` (shared with Maintenance and ParkMan2, each in its
+own Postgres schema — Hub's own tables live in the `hub` schema, not
+`public`). Previously `qkbpsqlrzygcairtidye`. See
+`SUPABASE-CONSOLIDATION-PLAN.md` in the treetops-maintenance repo for the
+full migration record.
 
 ## Who you're talking to
 
