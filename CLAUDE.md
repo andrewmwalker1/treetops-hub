@@ -45,7 +45,8 @@ things to check or do automatically, every session.
   28 Aug 2026, Hub runs in the **shared** project `ozhwgrzlpvfdemmogmav`
   (the same one Tree Tops Maintenance and ParkMan2 use), inside its own
   `hub` schema — not the old standalone `qkbpsqlrzygcairtidye` project,
-  which is retired/pending decommission. Confirm with `supabase link`
+  which was deleted 7 Sep 2026 and no longer exists. Confirm with
+  `supabase link`
   before any `secrets set` or `functions deploy`, and remember every
   table/RPC reference needs to be schema-qualified (`hub.*`) or use the
   client's `db: { schema: "hub" }` — several of Hub's calls are raw
