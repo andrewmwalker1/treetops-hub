@@ -41,10 +41,17 @@ things to check or do automatically, every session.
 - `index.html` must be real source referencing `/main.jsx` — never a
   snapshot of a previously built page.
 - Any Supabase RPC/table change: update the matching `.sql` file in the
-  repo AND actually run it against the live Supabase project (linked as
-  `qkbpsqlrzygcairtidye` — confirm with `supabase link` before any
-  `secrets set` or `functions deploy`, there are two projects on this
-  account).
+  repo AND actually run it against the live Supabase project. Since
+  28 Aug 2026, Hub runs in the **shared** project `ozhwgrzlpvfdemmogmav`
+  (the same one Tree Tops Maintenance and ParkMan2 use), inside its own
+  `hub` schema — not the old standalone `qkbpsqlrzygcairtidye` project,
+  which is retired/pending decommission. Confirm with `supabase link`
+  before any `secrets set` or `functions deploy`, and remember every
+  table/RPC reference needs to be schema-qualified (`hub.*`) or use the
+  client's `db: { schema: "hub" }` — several of Hub's calls are raw
+  `fetch()` to PostgREST and need `Accept-Profile`/`Content-Profile`
+  headers instead. See `treetops-maintenance/SUPABASE-CONSOLIDATION-PLAN.md`
+  for the full migration history.
 - After any change to `App.jsx`: bump `APP_VERSION` and `BUILD_DATE`,
   and update PROJECT-BRIEF.md's "Last updated" line in the same commit.
 - Always check `res.ok` and `console.error` on every Supabase `fetch()`

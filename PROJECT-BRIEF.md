@@ -49,7 +49,9 @@ manage content without touching code.
   on GitHub. Andy uses **GitHub Desktop** to push changes — the website's
   manual "Upload files" button doesn't unzip files or handle folders
   reliably and caused a broken deploy previously. Don't suggest it.
-- **Database:** Supabase project at `qkbpsqlrzygcairtidye.supabase.co`.
+- **Database:** Supabase project at `ozhwgrzlpvfdemmogmav.supabase.co`
+  (shared with Maintenance and ParkMan2 — see the Backend note at the top
+  of this doc), Hub's tables in the `hub` schema.
   Core table `app_data` — a simple key/value store (`key text primary
   key`, `value jsonb`). Each key holds one chunk of content as JSON:
   `notices`, `forms`, `directory`, `directoryCategories`, `contractors`,
