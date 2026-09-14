@@ -39,7 +39,7 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.17.1";
+const APP_VERSION = "1.17.2";
 const BUILD_DATE = "14 Sep 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
@@ -166,6 +166,12 @@ const SEED_DIRECTORY = [{"name": "Ambers Coffee Lounge (Takeaway)", "address": "
 const SEED_DIRECTORY_CATEGORIES = [{"id": "cat_eat_drink", "name": "Eat & Drink"}, {"id": "cat_shopping", "name": "Shopping"}, {"id": "cat_places_to_visit", "name": "Places to Visit"}, {"id": "cat_pet_shop", "name": "Pet Shop"}, {"id": "cat_vet", "name": "Vet"}, {"id": "cat_activity", "name": "Activity"}, {"id": "cat_boat_trips", "name": "Boat Trips"}, {"id": "cat_castle", "name": "Castle"}, {"id": "cat_cycling", "name": "Cycling"}, {"id": "cat_fishing", "name": "Fishing"}, {"id": "cat_golf", "name": "Golf"}, {"id": "cat_nature", "name": "Nature"}, {"id": "cat_pottery_painting", "name": "Pottery Painting"}, {"id": "cat_zip_wires", "name": "Zip Wires"}];
 
 const CATEGORY_NAME = (categories, id) => (categories.find((c) => c.id === id)?.name) || "Uncategorised";
+
+// A handful of contractors have two numbers in one field, e.g.
+// "01745 797879 / 01745 797878" (a landline + a mobile, or two staff) --
+// split on "/" so a caller can be offered both instead of only ever
+// reaching whichever one happened to be listed first.
+const PHONE_NUMBERS = (phone) => (phone || "").split("/").map((p) => p.trim()).filter(Boolean);
 
 
 // ---- Storage helpers ----
@@ -1205,7 +1211,7 @@ function ContractorCard({ contractor, categories }) {
         )}
       </div>
       {contractor.address && <p style={{ margin: "0 0 8px", fontSize: 12.5, color: C.bark, lineHeight: 1.4 }}>{contractor.address}</p>}
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
         {contractor.address && (
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(contractor.address + ", Wales")}`}
@@ -1217,11 +1223,16 @@ function ContractorCard({ contractor, categories }) {
             <Navigation size={13} /> Directions
           </a>
         )}
-        {contractor.phone && (
-          <a href={`tel:${contractor.phone.split("/")[0].trim().replace(/\s+/g, "")}`} onClick={() => logEvent("contractor_call", label)} style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}>
-            <PhoneCall size={13} /> {contractor.phone}
+        {PHONE_NUMBERS(contractor.phone).map((num) => (
+          <a
+            key={num}
+            href={`tel:${num.replace(/\s+/g, "")}`}
+            onClick={() => logEvent("contractor_call", label)}
+            style={{ flex: 1, background: C.sandDeep, borderRadius: 9, padding: "8px 10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12.5, fontWeight: 700, color: C.ink, textDecoration: "none" }}
+          >
+            <PhoneCall size={13} /> {num}
           </a>
-        )}
+        ))}
       </div>
 
       {showInfo && (

@@ -138,5 +138,14 @@ things to check or do automatically, every session.
   Add/Edit form above the list -- editing an entry far down a long list
   used to change that form invisibly off-screen with nothing to show it
   worked.
+- 2026-09-14, v1.17.2: Contractors' Call button only ever dialled the
+  first number for the handful of contractors with two ("01745 797879 /
+  01745 797878") -- it showed both as one label but split on "/" and
+  called index 0 no matter which part of the label you tapped. Now shows
+  one Call pill per number (`PHONE_NUMBERS()` helper), each dialling its
+  own. `EmergencyContactCard`'s starred-contractor mount still only shows
+  a starred contractor's first number (single-phone by design, shared
+  with real single-number emergency contacts) -- not touched, flagged for
+  Andy.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
