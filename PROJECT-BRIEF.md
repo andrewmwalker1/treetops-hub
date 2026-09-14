@@ -1,6 +1,6 @@
 # Tree Tops Hub — Project Briefing
 
-**Last updated:** 6 Sep 2026 (App.jsx APP_VERSION 1.17.0)
+**Last updated:** 14 Sep 2026 (App.jsx APP_VERSION 1.17.1)
 
 **Backend note:** as of this update, Hub's Supabase project is
 `ozhwgrzlpvfdemmogmav` (shared with Maintenance and ParkMan2, each in its

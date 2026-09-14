@@ -39,8 +39,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.17.0";
-const BUILD_DATE = "6 Sep 2026";
+const APP_VERSION = "1.17.1";
+const BUILD_DATE = "14 Sep 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -1820,6 +1820,17 @@ function confirmDelete(label, fn) {
 }
 
 function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown, disableUp, disableDown, featured, onToggleFeatured, featuredTitle = "Show on Home", onNotify, notifying }) {
+  // The edit form lives at the top of every admin screen that uses this
+  // (Add/Edit X above a Search + list) -- so clicking Edit on an entry
+  // further down a long list changed the form invisibly, off-screen,
+  // with nothing to show it worked. Scrolling to top on edit makes that
+  // visible instead of just "nothing happened".
+  const handleEdit = onEdit
+    ? () => {
+        onEdit();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    : undefined;
   return (
     <div style={{ ...card, display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
@@ -1830,12 +1841,19 @@ function AdminListItem({ title, subtitle, onDelete, onEdit, onMoveUp, onMoveDown
           <ChevronDown size={13} color={C.ink} />
         </button>
       </div>
-      <button onClick={onEdit} style={{ flex: 1, minWidth: 0, background: "none", border: "none", textAlign: "left", cursor: onEdit ? "pointer" : "default", padding: 0 }}>
+      <button onClick={handleEdit} style={{ flex: 1, minWidth: 0, background: "none", border: "none", textAlign: "left", cursor: onEdit ? "pointer" : "default", padding: 0 }}>
         <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.ink }}>{title}</p>
         {subtitle && <p style={{ margin: "2px 0 0", fontSize: 12, color: C.bark, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{subtitle}</p>}
       </button>
       {onEdit && (
-        <span style={{ fontSize: 11, fontWeight: 700, color: C.green, flexShrink: 0 }}>Edit</span>
+        // Was a plain <span> -- looked exactly like a button (bold, green,
+        // "Edit", right where you'd expect one) but had no onClick at all.
+        // The actual click target was the title/subtitle button to its
+        // left, so clicking directly on this label -- the obvious thing to
+        // click -- did nothing.
+        <button onClick={handleEdit} style={{ fontSize: 11, fontWeight: 700, color: C.green, flexShrink: 0, background: "none", border: "none", padding: 0, cursor: "pointer" }}>
+          Edit
+        </button>
       )}
       {onNotify && (
         <button onClick={onNotify} disabled={notifying} title="Send a push notification for this notice" style={{ background: C.sandDeep, border: "none", borderRadius: 11, width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", cursor: notifying ? "default" : "pointer", flexShrink: 0, opacity: notifying ? 0.5 : 1 }}>

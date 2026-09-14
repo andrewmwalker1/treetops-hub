@@ -125,5 +125,18 @@ things to check or do automatically, every session.
   is the only thing controlling display order there (the guest-facing
   Directory/"Places to explore" screen itself always sorts by `mins`,
   ignoring array order).
+- 2026-09-14, v1.17.1: fixed the shared `AdminListItem`'s "Edit" label
+  doing nothing when clicked -- reported against Admin → Contractors and
+  Admin → Directory, but it was a `<span>` with no `onClick` in the one
+  shared component every admin list screen uses (Notices, Forms, Info
+  items, Directory/Contractor categories, Directory, Contractors, Local
+  words, Emergency contacts), so it affected all of them. The real click
+  handler was on the adjacent title/subtitle button instead -- clicking
+  directly on the "Edit" text itself (the obvious thing to click) no-
+  opped. Made it a real button with the same handler, and added a
+  scroll-to-top on edit, since every one of these screens renders its
+  Add/Edit form above the list -- editing an entry far down a long list
+  used to change that form invisibly off-screen with nothing to show it
+  worked.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
