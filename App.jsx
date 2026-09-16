@@ -39,8 +39,8 @@ const bodyFont = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-se
 
 // Admin access is real Supabase Auth (magic link/OTP) checked against
 // the hub_admins allowlist — see AdminLogin below.
-const APP_VERSION = "1.17.2";
-const BUILD_DATE = "14 Sep 2026";
+const APP_VERSION = "1.17.3";
+const BUILD_DATE = "16 Sep 2026";
 
 const ICONS = { home: HomeIcon2, car: Car, file: FileText, info: Info, calendar: Calendar, wifi: Wifi, zap: Zap, phone: PhoneCall, map: MapPin, shield: ShieldCheck, clock: Clock };
 const ICON_KEYS = Object.keys(ICONS);
@@ -1331,11 +1331,17 @@ function ContractorsScreen({ contractors, categories }) {
 function EmergencyContactCard({ item }) {
   const isDanger = item.title === "999";
   const hasAddress = Boolean(item.address);
-  const telHref = `tel:${item.phone.replace(/\s+/g, "")}`;
+  const phones = PHONE_NUMBERS(item.phone);
   const mapsHref = hasAddress ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address + ", Wales")}` : null;
   const Icon = item.section === "medical" ? Stethoscope : item.section === "police" ? ShieldCheck : PhoneCall;
   const iconBg = isDanger ? "#F6E2DC" : "#E1F5E7";
   const iconColor = isDanger ? C.danger : C.green;
+  // Real emergency contacts (999, hospital...) always have exactly one
+  // number, but a starred contractor can have two ("landline / mobile") --
+  // the compact single-pill layout below can't hold two, so anything with
+  // more than one number falls back to the same bottom-row layout an
+  // address would use, one Call pill per number.
+  const useBottomRow = hasAddress || phones.length > 1;
 
   return (
     <div style={{ ...card, marginBottom: 10, border: isDanger ? `1.5px solid ${C.danger}` : card.border }}>
@@ -1350,20 +1356,24 @@ function EmergencyContactCard({ item }) {
           </div>
           <p style={{ margin: "3px 0 0", fontSize: 12.5, color: C.bark, lineHeight: 1.4 }}>{item.sub}</p>
         </div>
-        {!hasAddress && (
-          <a href={telHref} onClick={() => logEvent("emergency_call", item.title)} style={{ flexShrink: 0, background: isDanger ? C.danger : C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 10, whiteSpace: "nowrap", textDecoration: "none" }}>
-            {item.phone}
+        {!useBottomRow && (
+          <a href={`tel:${phones[0].replace(/\s+/g, "")}`} onClick={() => logEvent("emergency_call", item.title)} style={{ flexShrink: 0, background: isDanger ? C.danger : C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "8px 12px", borderRadius: 10, whiteSpace: "nowrap", textDecoration: "none" }}>
+            {phones[0]}
           </a>
         )}
       </div>
-      {hasAddress && (
-        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <a href={telHref} onClick={() => logEvent("emergency_call", item.title)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none" }}>
-            <PhoneCall size={14} /> Call
-          </a>
-          <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.white, color: C.green, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none", border: `1.5px solid ${C.green}` }}>
-            <Navigation size={14} /> Directions
-          </a>
+      {useBottomRow && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+          {phones.map((num) => (
+            <a key={num} href={`tel:${num.replace(/\s+/g, "")}`} onClick={() => logEvent("emergency_call", item.title)} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.green, color: C.white, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none" }}>
+              <PhoneCall size={14} /> {phones.length > 1 ? num : "Call"}
+            </a>
+          ))}
+          {mapsHref && (
+            <a href={mapsHref} target="_blank" rel="noopener noreferrer" style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: C.white, color: C.green, fontSize: 13, fontWeight: 700, padding: "9px 0", borderRadius: 10, textDecoration: "none", border: `1.5px solid ${C.green}` }}>
+              <Navigation size={14} /> Directions
+            </a>
+          )}
         </div>
       )}
     </div>
@@ -1401,7 +1411,7 @@ function EmergencyContactsScreen({ contacts, contractors, contractorCategories, 
             {starredContractors.map((c) => (
               <EmergencyContactCard
                 key={c.id}
-                item={{ id: c.id, section: "park", title: c.name, sub: `Starred contractor — ${CATEGORY_NAME(contractorCategories, c.categoryId)}`, phone: c.phone.split("/")[0].trim(), address: c.address || "", starred: true }}
+                item={{ id: c.id, section: "park", title: c.name, sub: `Starred contractor — ${CATEGORY_NAME(contractorCategories, c.categoryId)}`, phone: c.phone, address: c.address || "", starred: true }}
               />
             ))}
           </>

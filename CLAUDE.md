@@ -143,9 +143,14 @@ things to check or do automatically, every session.
   01745 797878") -- it showed both as one label but split on "/" and
   called index 0 no matter which part of the label you tapped. Now shows
   one Call pill per number (`PHONE_NUMBERS()` helper), each dialling its
-  own. `EmergencyContactCard`'s starred-contractor mount still only shows
-  a starred contractor's first number (single-phone by design, shared
-  with real single-number emergency contacts) -- not touched, flagged for
-  Andy.
+  own.
+- 2026-09-16, v1.17.3: fixed the follow-up -- a starred contractor with
+  two numbers showed on the Emergency screen's "Recommended contractors"
+  via `EmergencyContactCard`, which was single-phone-only (one compact
+  pill; real emergency contacts like 999/the hospital never have two).
+  It now checks `PHONE_NUMBERS(item.phone).length` and falls back to the
+  same bottom-row-of-pills layout an address would use whenever there's
+  more than one, one Call pill per number -- real single-number contacts
+  render exactly as before either way.
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
