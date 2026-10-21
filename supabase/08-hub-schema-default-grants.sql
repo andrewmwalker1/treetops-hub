@@ -9,16 +9,22 @@
 -- only affects `public`, so it doesn't touch Hub.
 --
 -- Checked live 21 Oct 2026: default was anon + authenticated only.
--- service_role was added the same day so a new table also works from the
--- Edge Functions (invite-hub-admin, hub-send-notice-push). Idempotent.
+-- The same day, service_role was added so a new table also works from the
+-- Edge Functions (invite-hub-admin, hub-send-notice-push), and anon was
+-- removed to match CLAUDE.md's rule: the anon key gets no direct table
+-- privileges by default. A new table guests need to read directly needs
+-- its own `grant select on hub.<table> to anon;`; guest writes go through
+-- a `security definer` function instead. Existing tables keep whatever
+-- grants they already had -- this only affects tables created from now on.
+-- Idempotent.
 
 alter default privileges in schema hub
-  grant select, insert, update, delete on tables to anon, authenticated;
+  grant select, insert, update, delete on tables to authenticated, service_role;
 
 alter default privileges in schema hub
-  grant select, insert, update, delete on tables to service_role;
+  revoke all on tables from anon;
 
 -- To check:
 --   select pg_get_userbyid(defaclrole), defaclacl from pg_default_acl
 --   where defaclnamespace = 'hub'::regnamespace and defaclobjtype = 'r';
--- Expect {anon=arwd/postgres,authenticated=arwd/postgres,service_role=arwd/postgres}
+-- Expect {authenticated=arwd/postgres,service_role=arwd/postgres}

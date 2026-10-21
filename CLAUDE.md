@@ -158,6 +158,8 @@ things to check or do automatically, every session.
   `treetops-maintenance/SUPABASE-CONSOLIDATION-PLAN.md`), so rebuilding
   Hub from this repo alone wouldn't give you what's live. The schema's
   default grants are recorded in `08-hub-schema-default-grants.sql`
-  (`service_role` added and run on live that day).
+  (`service_role` added and `anon` removed on live that day, so a new
+  table gives the anon key nothing until you grant it -- add
+  `grant select on hub.<table> to anon;` for a table guests read directly).
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
