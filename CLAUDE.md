@@ -152,5 +152,12 @@ things to check or do automatically, every session.
   same bottom-row-of-pills layout an address would use whenever there's
   more than one, one Call pill per number -- real single-number contacts
   render exactly as before either way.
+- 2026-10-21: the `.sql` files here up to `07` still describe the old
+  standalone `public` setup -- the scripts actually used to recreate Hub
+  in the `hub` schema on 28 Aug 2026 were never committed (see
+  `treetops-maintenance/SUPABASE-CONSOLIDATION-PLAN.md`), so rebuilding
+  Hub from this repo alone wouldn't give you what's live. The schema's
+  default grants are recorded in `08-hub-schema-default-grants.sql`
+  (`service_role` added and run on live that day).
 - Next feature under consideration: a maintenance/reporting function
   (guest- or staff-facing, not yet scoped).
